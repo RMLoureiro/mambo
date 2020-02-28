@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="babel-core">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/babel-core.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

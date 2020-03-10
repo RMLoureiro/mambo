@@ -1,10 +1,6 @@
-import Memberships.Membership;
+import Memberships.HyParView.HyParView;
 import babel.Babel;
-import babel.exceptions.HandlerRegistrationException;
-import babel.exceptions.InvalidParameterException;
-import babel.exceptions.ProtocolAlreadyExistsException;
 
-import java.io.IOException;
 import java.util.Properties;
 
 
@@ -20,7 +16,7 @@ public class Main {
 
         Thread.sleep(1000);
 
-        Membership membership = new Membership();
+        HyParView membership = new HyParView();
         membership.init(configProps);
         babel.registerProtocol(membership);
 

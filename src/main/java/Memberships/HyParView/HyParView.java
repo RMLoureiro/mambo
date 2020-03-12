@@ -7,15 +7,20 @@ import network.data.Host;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Properties;
+import java.net.InetSocketAddress;
+import java.util.*;
 
 public class HyParView extends GenericProtocol {
 
-    public static short PROTOCOL_ID = 1;
+    public static short PROTOCOL_ID = 100;
     public static String PROTOCOL_NAME = "HPV";
 
     Host myself;
     int channelId;
+
+    Set<Host> passiveView;
+    Map<String, Host> activeView;
+    private int active, passive;
 
 
     public HyParView() {
@@ -27,6 +32,13 @@ public class HyParView extends GenericProtocol {
         try {
             myself = new Host(InetAddress.getByName(props.getProperty("address")),
                     Integer.parseInt(props.getProperty("port")));
+
+            active = Integer.parseInt(props.getProperty("active"));
+            passive = Integer.parseInt(props.getProperty("passive"));
+
+            activeView = new HashMap<>();
+            passiveView = new HashSet();
+
             System.out.println(InetAddress.getByName(props.getProperty("address")) + props.getProperty("port"));
             channelId = createChannel("Ackos", props);
         } catch (IOException e) {
@@ -55,7 +67,27 @@ public class HyParView extends GenericProtocol {
 
     protected void uponJoin(Join msg, Host from, short sProto, int cId) {
         System.out.println("Received: " +  msg.toString() + " from " + msg.getSender().toString());
+        while(activeView.size() >= active){
+            dropRandomFromActive(null);
+        }
+        activeView.put(msg.getSender().toString(), from);
+        
+        //TODO random walk
+    }
 
+    private void dropRandomFromActive(String addr) {
+        Random rnd = new Random();
+        HashSet<String> tmp = new HashSet<>(activeView.keySet());
+
+        if(addr != null){
+            tmp.remove(addr);
+        }
+
+        int i = rnd.nextInt(tmp.size());
+        String del = (String) tmp.toArray()[i];
+        Host disc = activeView.remove(del);
+
+        closeConnection(disc);
     }
 
     protected void uponJoinSent(Join msg, Host to, short destProto, int channelId){

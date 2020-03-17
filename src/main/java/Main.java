@@ -12,7 +12,7 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         Babel babel = Babel.getInstance();
-        Properties configProps = babel.loadConfig("network_config.properties", args);
+        Properties configProps = babel.loadConfig("node2.properties", args);
 
         Thread.sleep(1000);
 

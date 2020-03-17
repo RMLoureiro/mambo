@@ -19,7 +19,6 @@ public class Join extends ProtoMessage {
     public static final ISerializer<ProtoMessage> serializer = new ISerializer<ProtoMessage>() {
         @Override
         public void serialize(ProtoMessage message, ByteBuf out) throws IOException {
-            Join join = (Join) message;
             Host.serializer.serialize(sender, out);
         }
 

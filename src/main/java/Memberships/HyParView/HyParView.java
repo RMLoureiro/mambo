@@ -1,9 +1,15 @@
 package Memberships.HyParView;
 
+import Memberships.HyParView.Messages.ForwardJoin;
 import Memberships.HyParView.Messages.Join;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.GenericProtocol;
+import babel.generic.ProtoMessage;
+import channel.ackos.events.NodeDownEvent;
+import channel.tcp.events.InConnectionDown;
+import channel.tcp.events.OutConnectionDown;
 import network.data.Host;
+import network.pipeline.InConnectionHandler;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -20,7 +26,7 @@ public class HyParView extends GenericProtocol {
 
     Set<Host> passiveView;
     Map<String, Host> activeView;
-    private int active, passive;
+    private int ACTIVE, PASSIVE, ARWL, PRWL;
 
 
     public HyParView() {
@@ -33,8 +39,10 @@ public class HyParView extends GenericProtocol {
             myself = new Host(InetAddress.getByName(props.getProperty("address")),
                     Integer.parseInt(props.getProperty("port")));
 
-            active = Integer.parseInt(props.getProperty("active"));
-            passive = Integer.parseInt(props.getProperty("passive"));
+            ACTIVE = Integer.parseInt(props.getProperty("active"));
+            PASSIVE = Integer.parseInt(props.getProperty("passive"));
+            ARWL = Integer.parseInt(props.getProperty("ARWL"));
+            PRWL = Integer.parseInt(props.getProperty("PRWL"));
 
             activeView = new HashMap<>();
             passiveView = new HashSet();
@@ -48,7 +56,12 @@ public class HyParView extends GenericProtocol {
 
         registerMessageSerializer(Join.MSG_CODE, Join.serializer);
         registerMessageHandler(channelId, Join.MSG_CODE, this::uponJoin,
-                this::uponJoinSent, this::uponMessageFailed);
+                this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(ForwardJoin.MSG_CODE, ForwardJoin.serializer);
+        registerMessageHandler(channelId, ForwardJoin.MSG_CODE, this::uponForwardJoin,
+                this::uponMessageSent, this::uponMessageFailed);
+        registerChannelEventHandler(channelId, NodeDownEvent.EVENT_ID, this::uponNodeDown);
 
         if (props.containsKey("Contact")){
             try {
@@ -67,12 +80,52 @@ public class HyParView extends GenericProtocol {
 
     protected void uponJoin(Join msg, Host from, short sProto, int cId) {
         System.out.println("Received: " +  msg.toString() + " from " + msg.getSender().toString());
-        while(activeView.size() >= active){
+
+        while(activeView.size() >= ACTIVE){
             dropRandomFromActive(null);
         }
+
         activeView.put(msg.getSender().toString(), from);
-        
-        //TODO random walk
+
+        if(activeView.size() > 1){
+            for(String neigh : activeView.keySet()){
+                if(!neigh.equals(msg.getSender().toString())){
+                    sendMessage(new ForwardJoin(myself, msg.getSender(), ARWL),  activeView.get(neigh));
+                }
+            }
+        }
+
+    }
+
+    protected void uponForwardJoin(ForwardJoin msg, Host from, short sProto, int cId) {
+        if((activeView.size() <= 1 || msg.getTTL() == 0) && !activeView.containsKey(msg.getNewNode().toString()) && !msg.getNewNode().equals(myself)){
+            while (activeView.size() >= ACTIVE) {
+                dropRandomFromActive(null);
+            }
+
+            passiveView.remove(msg.getNewNode());
+            activeView.put(msg.getNewNode().toString(), msg.getNewNode());
+            //TODO send join reply
+        }else if((msg.getTTL() == PRWL) && !activeView.containsKey(msg.getNewNode().toString()) && !msg.getNewNode().equals(myself)){
+            if(passiveView.size() >= PASSIVE){
+                dropRandomFromPassive();
+            }
+
+            passiveView.add(msg.getNewNode());
+        }
+
+        if(msg.getTTL() > 0){
+            Random r = new Random();
+            HashSet<String> tmp = new HashSet<>(activeView.keySet());
+
+            tmp.remove(msg.getSender());
+            tmp.remove(msg.getNewNode());
+
+            if(!tmp.isEmpty()){
+                int i = r.nextInt(tmp.size());
+                sendMessage(new ForwardJoin(myself, msg.getNewNode(), msg.getTTL() - 1), activeView.get(tmp.toArray()[i]));
+            }
+        }
     }
 
     private void dropRandomFromActive(String addr) {
@@ -90,10 +143,25 @@ public class HyParView extends GenericProtocol {
         closeConnection(disc);
     }
 
-    protected void uponJoinSent(Join msg, Host to, short destProto, int channelId){
+    private  void dropRandomFromPassive(){
+        Random rnd = new Random();
+        int i = rnd.nextInt(passiveView.size());
+        String del = (String) passiveView.toArray()[i];
+        passiveView.remove(del);
+    }
+
+    protected void uponMessageSent(ProtoMessage msg, Host to, short destProto, int channelId){
         System.out.println("Sent: " + msg.toString() + " to " + to.toString());
     }
-    protected void uponMessageFailed(Join msg, Host to, short destProto, Throwable cause, int channelId) {
+    protected void uponMessageFailed(ProtoMessage msg, Host to, short destProto, Throwable cause, int channelId) {
+        activeView.remove(to.toString());
+        closeConnection(to);
+        System.out.println("Message Failed: " + to.toString());
+    }
 
+    private void uponNodeDown(NodeDownEvent<ProtoMessage> evt, int channelId) {
+        System.out.println("Disconnect: " + evt.getNode().toString());
+        activeView.remove(evt.getNode().toString());
+        closeConnection(evt.getNode());
     }
 }

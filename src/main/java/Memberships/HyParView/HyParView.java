@@ -2,6 +2,7 @@ package Memberships.HyParView;
 
 import Memberships.HyParView.Messages.ForwardJoin;
 import Memberships.HyParView.Messages.Join;
+import Memberships.HyParView.Messages.JoinReply;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.GenericProtocol;
 import babel.generic.ProtoMessage;
@@ -61,6 +62,11 @@ public class HyParView extends GenericProtocol {
         registerMessageSerializer(ForwardJoin.MSG_CODE, ForwardJoin.serializer);
         registerMessageHandler(channelId, ForwardJoin.MSG_CODE, this::uponForwardJoin,
                 this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(JoinReply.MSG_CODE, JoinReply.serializer);
+        registerMessageHandler(channelId, JoinReply.MSG_CODE, this::uponJoinReply,
+                this::uponMessageSent, this::uponMessageFailed);
+
         registerChannelEventHandler(channelId, NodeDownEvent.EVENT_ID, this::uponNodeDown);
 
         if (props.containsKey("Contact")){
@@ -79,7 +85,7 @@ public class HyParView extends GenericProtocol {
     }
 
     protected void uponJoin(Join msg, Host from, short sProto, int cId) {
-        System.out.println("Received: " +  msg.toString() + " from " + msg.getSender().toString());
+        System.out.println("Received: " + msg.toString() + " from " + msg.getSender().toString());
 
         while(activeView.size() >= ACTIVE){
             dropRandomFromActive(null);
@@ -98,6 +104,7 @@ public class HyParView extends GenericProtocol {
     }
 
     protected void uponForwardJoin(ForwardJoin msg, Host from, short sProto, int cId) {
+        System.out.println("Received: " + msg.toString() + " from " + msg.getSender().toString());
         if((activeView.size() <= 1 || msg.getTTL() == 0) && !activeView.containsKey(msg.getNewNode().toString()) && !msg.getNewNode().equals(myself)){
             while (activeView.size() >= ACTIVE) {
                 dropRandomFromActive(null);
@@ -105,7 +112,8 @@ public class HyParView extends GenericProtocol {
 
             passiveView.remove(msg.getNewNode());
             activeView.put(msg.getNewNode().toString(), msg.getNewNode());
-            //TODO send join reply
+            sendMessage(new JoinReply(myself), msg.getNewNode());
+
         }else if((msg.getTTL() == PRWL) && !activeView.containsKey(msg.getNewNode().toString()) && !msg.getNewNode().equals(myself)){
             if(passiveView.size() >= PASSIVE){
                 dropRandomFromPassive();
@@ -126,6 +134,15 @@ public class HyParView extends GenericProtocol {
                 sendMessage(new ForwardJoin(myself, msg.getNewNode(), msg.getTTL() - 1), activeView.get(tmp.toArray()[i]));
             }
         }
+    }
+
+    protected void uponJoinReply(JoinReply msg, Host from, short sProto, int cId) {
+        System.out.println("Received: " + msg.toString() + " from " + msg.getSender().toString());
+        while(activeView.size() >= ACTIVE){
+            dropRandomFromActive(null);
+        }
+        passiveView.remove(msg.getSender());
+        activeView.put(msg.getSender().toString(), msg.getSender());
     }
 
     private void dropRandomFromActive(String addr) {

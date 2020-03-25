@@ -1,38 +1,35 @@
 package Memberships.HyParView.Messages;
 
 import babel.generic.ProtoMessage;
+import babel.generic.ProtoNotification;
 import io.netty.buffer.ByteBuf;
 import network.ISerializer;
 import network.data.Host;
 
 import java.io.IOException;
 
-public class JoinReply extends ProtoMessage {
-    static Host sender;
-    public static final short MSG_CODE = 103;
+public class FindNeighbour extends ProtoMessage {
+    public final static short MSG_CODE = 105;
 
-    public JoinReply(Host sender) {
-        super(MSG_CODE);
-        this.sender = sender;
+    public FindNeighbour() {
+        super(FindNeighbour.MSG_CODE);
     }
+
 
     public static final ISerializer<ProtoMessage> serializer = new ISerializer<ProtoMessage>() {
         @Override
         public void serialize(ProtoMessage message, ByteBuf out) throws IOException {
-            Host.serializer.serialize(sender, out);
+
         }
 
         @Override
-        public Join deserialize(ByteBuf in) throws IOException {
-            Host host = Host.serializer.deserialize(in);
-            return new Join(host);
+        public FindNeighbour deserialize(ByteBuf in) throws IOException {
+            return new FindNeighbour();
         }
     };
 
-    public Host getSender(){ return sender;}
-
     @Override
     public String toString() {
-        return "Join reply Message";
+        return "Find new Neighbour";
     }
 }

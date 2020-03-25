@@ -7,11 +7,11 @@ import network.data.Host;
 
 import java.io.IOException;
 
-public class JoinReply extends ProtoMessage {
+public class NeighbourRej extends ProtoMessage {
     static Host sender;
-    public static final short MSG_CODE = 103;
+    public static final short MSG_CODE = 107;
 
-    public JoinReply(Host sender) {
+    public NeighbourRej(Host sender) {
         super(MSG_CODE);
         this.sender = sender;
     }
@@ -23,9 +23,9 @@ public class JoinReply extends ProtoMessage {
         }
 
         @Override
-        public Join deserialize(ByteBuf in) throws IOException {
+        public NeighbourRej deserialize(ByteBuf in) throws IOException {
             Host host = Host.serializer.deserialize(in);
-            return new Join(host);
+            return new NeighbourRej(host);
         }
     };
 
@@ -33,6 +33,6 @@ public class JoinReply extends ProtoMessage {
 
     @Override
     public String toString() {
-        return "Join reply Message";
+        return "Neighbour reject Message";
     }
 }

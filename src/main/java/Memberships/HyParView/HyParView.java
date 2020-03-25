@@ -1,21 +1,15 @@
 package Memberships.HyParView;
 
-import Memberships.HyParView.Messages.ForwardJoin;
-import Memberships.HyParView.Messages.Join;
-import Memberships.HyParView.Messages.JoinReply;
+import Memberships.HyParView.Messages.*;
 import Memberships.HyParView.Timer.Views;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.GenericProtocol;
 import babel.generic.ProtoMessage;
 import channel.ackos.events.NodeDownEvent;
-import channel.tcp.events.InConnectionDown;
-import channel.tcp.events.OutConnectionDown;
 import network.data.Host;
-import network.pipeline.InConnectionHandler;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -69,6 +63,21 @@ public class HyParView extends GenericProtocol {
         registerMessageHandler(channelId, JoinReply.MSG_CODE, this::uponJoinReply,
                 this::uponMessageSent, this::uponMessageFailed);
 
+        registerMessageSerializer(NeighbourReq.MSG_CODE, NeighbourReq.serializer);
+        registerMessageHandler(channelId, NeighbourReq.MSG_CODE, this::uponNeighbourReq,
+                this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(NeighbourAcc.MSG_CODE, NeighbourAcc.serializer);
+        registerMessageHandler(channelId, NeighbourAcc.MSG_CODE, this::uponNeighbourAcc,
+                this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(NeighbourRej.MSG_CODE, NeighbourRej.serializer);
+        registerMessageHandler(channelId, NeighbourRej.MSG_CODE, this::uponNeighbourRej,
+                this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(FindNeighbour.MSG_CODE, FindNeighbour.serializer);
+        registerMessageHandler(channelId, FindNeighbour.MSG_CODE, this::uponFindNeighbour,
+                this::uponMessageSent, this::uponMessageFailed);
 
         registerTimerHandler(Views.TIMER_CODE, this::uponViews);
 
@@ -80,14 +89,17 @@ public class HyParView extends GenericProtocol {
                 Host contact = new Host(InetAddress.getByName(hostElements[0]), Short.parseShort(hostElements[1]));
                 System.out.println(myself.toString());
                 sendMessage(new Join(myself), contact);
+                sendMessage(new FindNeighbour(), new Host(myself.getAddress(), myself.getPort()));
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println("Invalid contact on configuration: '" + props.getProperty("Contact"));
             }
         }
 
-        setupPeriodicTimer( new Views(), 1000, 5000);
 
+        sendMessage(new FindNeighbour(), new Host(myself.getAddress(), myself.getPort()));
+
+        setupPeriodicTimer( new Views(), 1000, 1000);
     }
 
     protected void uponJoin(Join msg, Host from, short sProto, int cId) {
@@ -150,6 +162,68 @@ public class HyParView extends GenericProtocol {
         passiveView.remove(msg.getSender());
         activeView.put(msg.getSender().toString(), msg.getSender());
     }
+
+    protected void uponNeighbourReq(NeighbourReq msg, Host from, short sProto, int cId) {
+        if(!activeView.containsKey(msg.getSender().toString())) {
+            if (activeView.size() >= ACTIVE && msg.getPriority() > 0) {
+                while (activeView.size() >= ACTIVE) {
+                    dropRandomFromActive(null);
+                }
+            }
+
+            if (activeView.size() < ACTIVE) {
+                activeView.put(msg.getSender().toString(), msg.getSender());
+                passiveView.remove(msg.getSender());
+                sendMessage(new NeighbourAcc(myself), msg.getSender());
+            } else {
+                sendMessage(new NeighbourRej(myself), msg.getSender());
+            }
+        }
+    }
+
+    protected void uponNeighbourAcc(NeighbourAcc msg, Host from, short sProto, int cId) {
+        activeView.put(msg.getSender().toString(), msg.getSender());
+        passiveView.remove(msg.getSender());
+    }
+
+    protected void uponNeighbourRej(NeighbourRej msg, Host from, short sProto, int cId) {
+        sendMessage(new FindNeighbour(), new Host(myself.getAddress(), myself.getPort()));
+    }
+
+
+    protected void uponFindNeighbour(FindNeighbour msg, Host from, short sProto, int cId) {
+        if(activeView.size() == ACTIVE) {
+            return;
+        } else if(passiveView.isEmpty()){
+            sendMessage(new FindNeighbour(), new Host(myself.getAddress(), myself.getPort()));
+            return;
+        }
+
+        int priority;
+
+        if(activeView.size() <= 1){
+            priority = 1 + activeView.size();
+        }else{
+            priority = 0;
+        }
+
+        Random rnd = new Random();
+        int c = ACTIVE - activeView.size();
+        Host h;
+
+        while(!passiveView.isEmpty() || c > 0) {
+            int i = rnd.nextInt(passiveView.size());
+            h = (Host) passiveView.toArray()[i];
+            sendMessage(new NeighbourReq(myself,priority), h);
+            passiveView.remove(h);
+            priority--;
+        }
+
+        if(c > 0){
+            sendMessage(new FindNeighbour(), new Host(myself.getAddress(), myself.getPort()));
+        }
+    }
+
 
     private void dropRandomFromActive(String addr) {
         Random rnd = new Random();

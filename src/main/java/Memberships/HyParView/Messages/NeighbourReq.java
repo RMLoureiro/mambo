@@ -7,32 +7,38 @@ import network.data.Host;
 
 import java.io.IOException;
 
-public class JoinReply extends ProtoMessage {
+public class NeighbourReq extends ProtoMessage {
     static Host sender;
-    public static final short MSG_CODE = 103;
+    static int priority;
+    public static final short MSG_CODE = 104;
 
-    public JoinReply(Host sender) {
+    public NeighbourReq(Host sender, int priority) {
         super(MSG_CODE);
         this.sender = sender;
+        this.priority = priority;
     }
 
     public static final ISerializer<ProtoMessage> serializer = new ISerializer<ProtoMessage>() {
         @Override
         public void serialize(ProtoMessage message, ByteBuf out) throws IOException {
             Host.serializer.serialize(sender, out);
+            out.writeInt(priority);
         }
 
         @Override
-        public Join deserialize(ByteBuf in) throws IOException {
+        public NeighbourReq deserialize(ByteBuf in) throws IOException {
             Host host = Host.serializer.deserialize(in);
-            return new Join(host);
+            int priority =  in.readInt();
+            return new NeighbourReq(host, priority);
         }
     };
 
     public Host getSender(){ return sender;}
 
+    public int getPriority(){ return priority;}
+
     @Override
     public String toString() {
-        return "Join reply Message";
+        return "Neighbour request message with " + priority + "priority";
     }
 }

@@ -91,7 +91,7 @@ public class HyParView extends GenericProtocol {
             dropRandomFromActive(null);
         }
 
-        activeView.put(msg.getSender().toString(), from);
+        activeView.put(msg.getSender().toString(), new Host(msg.getSender().getAddress(), msg.getSender().getPort()));
 
         if(activeView.size() > 1){
             for(String neigh : activeView.keySet()){
@@ -111,7 +111,7 @@ public class HyParView extends GenericProtocol {
             }
 
             passiveView.remove(msg.getNewNode());
-            activeView.put(msg.getNewNode().toString(), msg.getNewNode());
+            activeView.put(msg.getNewNode().toString(), new Host(msg.getNewNode().getAddress(), msg.getNewNode().getPort()));
             sendMessage(new JoinReply(myself), msg.getNewNode());
 
         }else if((msg.getTTL() == PRWL) && !activeView.containsKey(msg.getNewNode().toString()) && !msg.getNewNode().equals(myself)){

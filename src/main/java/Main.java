@@ -1,6 +1,7 @@
 import Memberships.HyParView.HyParView;
 import babel.Babel;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 
@@ -12,7 +13,8 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         Babel babel = Babel.getInstance();
-        Properties configProps = babel.loadConfig("node2.properties", args);
+        String[] arguments = Arrays.copyOfRange(args, 1, args.length);
+        Properties configProps = babel.loadConfig(args[0], arguments);
 
         Thread.sleep(1000);
 

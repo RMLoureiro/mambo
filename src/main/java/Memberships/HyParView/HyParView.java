@@ -3,6 +3,7 @@ package Memberships.HyParView;
 import Memberships.HyParView.Messages.ForwardJoin;
 import Memberships.HyParView.Messages.Join;
 import Memberships.HyParView.Messages.JoinReply;
+import Memberships.HyParView.Timer.Views;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.GenericProtocol;
 import babel.generic.ProtoMessage;
@@ -15,6 +16,7 @@ import network.pipeline.InConnectionHandler;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.sql.Timestamp;
 import java.util.*;
 
 public class HyParView extends GenericProtocol {
@@ -57,7 +59,7 @@ public class HyParView extends GenericProtocol {
 
         registerMessageSerializer(Join.MSG_CODE, Join.serializer);
         registerMessageHandler(channelId, Join.MSG_CODE, this::uponJoin,
-                this::uponMessageSent, this::uponMessageFailed);
+                this::uponJoinSent, this::uponMessageFailed);
 
         registerMessageSerializer(ForwardJoin.MSG_CODE, ForwardJoin.serializer);
         registerMessageHandler(channelId, ForwardJoin.MSG_CODE, this::uponForwardJoin,
@@ -66,6 +68,9 @@ public class HyParView extends GenericProtocol {
         registerMessageSerializer(JoinReply.MSG_CODE, JoinReply.serializer);
         registerMessageHandler(channelId, JoinReply.MSG_CODE, this::uponJoinReply,
                 this::uponMessageSent, this::uponMessageFailed);
+
+
+        registerTimerHandler(Views.TIMER_CODE, this::uponViews);
 
         registerChannelEventHandler(channelId, NodeDownEvent.EVENT_ID, this::uponNodeDown);
 
@@ -81,6 +86,7 @@ public class HyParView extends GenericProtocol {
             }
         }
 
+        setupPeriodicTimer( new Views(), 1000, 5000);
 
     }
 
@@ -167,6 +173,11 @@ public class HyParView extends GenericProtocol {
         passiveView.remove(del);
     }
 
+    protected void uponJoinSent(ProtoMessage msg, Host to, short destProto, int channelId){
+        System.out.println("Sent: " + msg.toString() + " to " + to.toString());
+        activeView.put(to.getAddress().toString(), to);
+    }
+
     protected void uponMessageSent(ProtoMessage msg, Host to, short destProto, int channelId){
         System.out.println("Sent: " + msg.toString() + " to " + to.toString());
     }
@@ -180,5 +191,45 @@ public class HyParView extends GenericProtocol {
         System.out.println("Disconnect: " + evt.getNode().toString());
         activeView.remove(evt.getNode().toString());
         closeConnection(evt.getNode());
+    }
+
+
+    private void uponViews(Views timer, long uId) {
+        Iterator<Host> active = activeView.values().iterator();
+        Host next;
+
+        System.out.print(new Timestamp(System.currentTimeMillis()) +", ");
+        for(int i = 0; i<ACTIVE;i++){
+            if (active.hasNext()) {
+                next = active.next();
+                System.out.print(next.getAddress() + "-");
+                System.out.print(next.getPort());
+            }
+            else{
+                System.out.print("-1");
+            }
+            if(i<ACTIVE - 1){
+                System.out.print(", ");
+            }
+        }
+
+        System.out.println();
+
+        /**     Iterator<InetSocketAddress> passive = getPassive();
+         for(int i = 0; i<PASSIVE;i++){
+         if (passive.hasNext()) {
+         next = passive.next();
+         System.out.print(next.getAddress().toString() + ":");
+         System.out.print(next.getPort());
+         }
+         else{
+         System.out.print("-1");
+         }
+         if(i<PASSIVE - 1){
+         System.out.print(", ");
+         }
+         }
+
+         System.out.println();**/
     }
 }

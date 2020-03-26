@@ -79,7 +79,12 @@ public class HyParView extends GenericProtocol {
         registerMessageHandler(channelId, FindNeighbour.MSG_CODE, this::uponFindNeighbour,
                 this::uponMessageSent, this::uponMessageFailed);
 
+        registerMessageSerializer(Shuffle.MSG_CODE, Shuffle.serializer);
+        registerMessageHandler(channelId, Shuffle.MSG_CODE, this::uponShuffle,
+                this::uponMessageSent, this::uponMessageFailed);
+
         registerTimerHandler(Views.TIMER_CODE, this::uponViews);
+        registerTimerHandler(Views.TIMER_CODE, this::uponShuffleTimer);
 
         registerChannelEventHandler(channelId, NodeDownEvent.EVENT_ID, this::uponNodeDown);
 
@@ -190,6 +195,10 @@ public class HyParView extends GenericProtocol {
         sendMessage(new FindNeighbour(), new Host(myself.getAddress(), myself.getPort()));
     }
 
+
+    protected void uponShuffle(Shuffle msg, Host from, short sProto, int cId) {
+
+    }
 
     protected void uponFindNeighbour(FindNeighbour msg, Host from, short sProto, int cId) {
         if(activeView.size() == ACTIVE) {

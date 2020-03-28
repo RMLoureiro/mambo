@@ -4,11 +4,11 @@ import babel.generic.ProtoTimer;
 
 import javax.swing.text.View;
 
-public class Shuffle extends ProtoTimer {
+public class ShuffleT extends ProtoTimer {
 
     public static final short TIMER_CODE = 102;
 
-    public Shuffle() {
+    public ShuffleT() {
         super(Views.TIMER_CODE);
     }
 

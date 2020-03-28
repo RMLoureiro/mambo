@@ -1,6 +1,7 @@
 package Memberships.HyParView;
 
 import Memberships.HyParView.Messages.*;
+import Memberships.HyParView.Timer.ShuffleT;
 import Memberships.HyParView.Timer.Views;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.GenericProtocol;
@@ -23,7 +24,7 @@ public class HyParView extends GenericProtocol {
 
     Set<Host> passiveView;
     Map<String, Host> activeView;
-    private int ACTIVE, PASSIVE, ARWL, PRWL;
+    private int ACTIVE, PASSIVE, ARWL, PRWL, KAS, KPS, ShuffleTTL;
 
 
     public HyParView() {
@@ -40,6 +41,9 @@ public class HyParView extends GenericProtocol {
             PASSIVE = Integer.parseInt(props.getProperty("passive"));
             ARWL = Integer.parseInt(props.getProperty("ARWL"));
             PRWL = Integer.parseInt(props.getProperty("PRWL"));
+            KAS = Integer.parseInt(props.getProperty("KAS"));
+            KPS = Integer.parseInt(props.getProperty("KPS"));
+            ShuffleTTL = Integer.parseInt(props.getProperty("ShuffleTTL"));
 
             activeView = new HashMap<>();
             passiveView = new HashSet();
@@ -81,6 +85,10 @@ public class HyParView extends GenericProtocol {
 
         registerMessageSerializer(Shuffle.MSG_CODE, Shuffle.serializer);
         registerMessageHandler(channelId, Shuffle.MSG_CODE, this::uponShuffle,
+                this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(ShuffleReply.MSG_CODE, ShuffleReply.serializer);
+        registerMessageHandler(channelId, ShuffleReply.MSG_CODE, this::uponShuffleReply,
                 this::uponMessageSent, this::uponMessageFailed);
 
         registerTimerHandler(Views.TIMER_CODE, this::uponViews);
@@ -196,7 +204,75 @@ public class HyParView extends GenericProtocol {
     }
 
 
+    private void uponShuffleTimer(ShuffleT timer, long uId) {
+        Random rnd = new Random();
+        Host n = (Host) activeView.values().toArray()[rnd.nextInt(activeView.size())];
+
+        HashSet<Host> k = new HashSet<>(activeView.values());
+        HashSet<Host> kp = new HashSet<>(passiveView);
+
+        while(k.size() > KAS){
+            k.remove(k.toArray()[rnd.nextInt(k.size())]);
+        }
+
+        while(kp.size() > KPS){
+            kp.remove(kp.toArray()[rnd.nextInt(kp.size())]);
+        }
+
+        k.addAll(kp);
+        sendMessage(new Shuffle(myself, myself, ShuffleTTL, k), n);
+    }
+
     protected void uponShuffle(Shuffle msg, Host from, short sProto, int cId) {
+        int ttl = msg.getTTL() - 1;
+
+        if(ttl > 0){
+            HashSet<Host> tmp = new HashSet(activeView.values());
+            tmp.remove(msg.getSender());
+            tmp.remove(msg.getOrigin());
+
+            if(tmp.isEmpty()){
+                return;
+            }else{
+                Random rnd = new Random();
+                Host n = (Host) tmp.toArray()[rnd.nextInt(tmp.size())];
+                sendMessage(new Shuffle(myself, msg.getOrigin(), ttl, msg.getK()), n);
+            }
+        }else{
+            HashSet<Host> kRply = new HashSet<>();
+            Iterator<Host> it = passiveView.iterator();
+            Host tmp;
+
+            while(it.hasNext() && kRply.size() < msg.getK().size()){
+                tmp = it.next();
+                if(!msg.getK().contains(tmp)){
+                    kRply.add(tmp);
+                }
+            }
+
+            sendMessage(new ShuffleReply(myself, msg.getK(), kRply), msg.getOrigin());
+        }
+    }
+
+    protected void uponShuffleReply(ShuffleReply msg, Host from, short sProto, int cId) {
+        Iterator<Host> it, it2;
+        it = msg.getKRply().iterator();
+        it2 = msg.getK().iterator();
+        Host tmp, tmp2;
+
+        while(it.hasNext()){
+            tmp = it.next();
+            if(!passiveView.contains(tmp) && !activeView.containsValue(tmp) && !tmp.equals(myself)){
+                if(passiveView.size() >= PASSIVE){
+                    if(it2.hasNext()) {
+                        tmp2 = it2.next();
+                        passiveView.remove(tmp2);
+                    } else {
+                        dropRandomFromPassive();
+                    }
+                }
+            }
+        }
 
     }
 

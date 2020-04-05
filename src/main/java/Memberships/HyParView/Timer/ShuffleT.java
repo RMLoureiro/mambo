@@ -9,7 +9,7 @@ public class ShuffleT extends ProtoTimer {
     public static final short TIMER_CODE = 102;
 
     public ShuffleT() {
-        super(Views.TIMER_CODE);
+        super(ShuffleT.TIMER_CODE);
     }
 
     @Override

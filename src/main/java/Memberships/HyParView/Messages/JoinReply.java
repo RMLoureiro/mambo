@@ -23,9 +23,9 @@ public class JoinReply extends ProtoMessage {
         }
 
         @Override
-        public Join deserialize(ByteBuf in) throws IOException {
+        public JoinReply deserialize(ByteBuf in) throws IOException {
             Host host = Host.serializer.deserialize(in);
-            return new Join(host);
+            return new JoinReply(host);
         }
     };
 

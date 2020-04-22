@@ -21,7 +21,7 @@ public class HyParView extends GenericProtocol {
     public static short PROTOCOL_ID = 100;
     public static String PROTOCOL_NAME = "HPV";
 
-    Host myself;
+    Host myself, contact = null;
     int channelId;
 
     Set<Host> passiveView;
@@ -48,7 +48,8 @@ public class HyParView extends GenericProtocol {
             KPS = Integer.parseInt(props.getProperty("KPS"));
             ShuffleTTL = Integer.parseInt(props.getProperty("ShuffleTTL"));
 
-            String  properties = "ACTIVE" + ACTIVE + "PASSIVE" + PASSIVE + "ARWL" + ARWL + "PRWL" + PRWL +
+            String  properties = "ACTIVE" + ACTIVE + "PASSIVE" + PASSIVE +
+                    "ARWL" + ARWL + "PRWL" + PRWL +
                     "KAS"+ KAS + "KPS" + KPS + "ShuffleTTL" + ShuffleTTL;
 
             hash = properties.hashCode();
@@ -66,6 +67,11 @@ public class HyParView extends GenericProtocol {
         registerMessageSerializer(Join.MSG_CODE, Join.serializer);
         registerMessageHandler(channelId, Join.MSG_CODE, this::uponJoin,
                 this::uponJoinSent, this::uponMessageFailed);
+
+
+        registerMessageSerializer(KillPill.MSG_CODE, KillPill.serializer);
+        registerMessageHandler(channelId, KillPill.MSG_CODE, this::uponKillPill,
+                this::uponMessageSent, this::uponMessageFailed);
 
         registerMessageSerializer(ForwardJoin.MSG_CODE, ForwardJoin.serializer);
         registerMessageHandler(channelId, ForwardJoin.MSG_CODE, this::uponForwardJoin,
@@ -107,9 +113,10 @@ public class HyParView extends GenericProtocol {
         if (props.containsKey("Contact")){
             try {
                 String[] hostElements = props.getProperty("Contact").split(":");
-                Host contact = new Host(InetAddress.getByName(hostElements[0]), Short.parseShort(hostElements[1]));
+                contact = new Host(InetAddress.getByName(hostElements[0]), Short.parseShort(hostElements[1]));
+
                 //System.out.println(myself.toString());
-                sendMessage(new Join(myself), contact);
+                sendMessage(new Join(myself, hash), contact);
                 sendMessage(new FindNeighbour(), new Host(myself.getAddress(), myself.getPort()));
             } catch (Exception e) {
                 e.printStackTrace();
@@ -127,21 +134,33 @@ public class HyParView extends GenericProtocol {
     protected void uponJoin(Join msg, Host from, short sProto, int cId) {
         //System.out.println("Received: " + msg.toString() + " from " + msg.getSender().toString());
 
-        while(activeView.size() >= ACTIVE){
-            dropRandomFromActive(null);
-        }
+        if(msg.getHash() == hash) {
+            while (activeView.size() >= ACTIVE) {
+                dropRandomFromActive(null);
+            }
 
-        activeView.add(new Host(msg.getSender().getAddress(), msg.getSender().getPort()));
+            activeView.add(new Host(msg.getSender().getAddress(), msg.getSender().getPort()));
 
-        if(activeView.size() > 1){
-            for(Host neigh : activeView){
-                if(!neigh.equals(msg.getSender().toString())){
-                    sendMessage(new ForwardJoin(myself, msg.getSender(), ARWL),  neigh);
+            if (activeView.size() > 1) {
+                for (Host neigh : activeView) {
+                    if (!neigh.equals(msg.getSender().toString())) {
+                        sendMessage(new ForwardJoin(myself, msg.getSender(), ARWL), neigh);
 
+                    }
                 }
             }
+        }else{
+            sendMessage(new KillPill(myself), msg.getSender());
         }
 
+    }
+
+    protected void uponKillPill(KillPill msg, Host from, short sProto, int cId) {
+        if(contact != null){
+            if(msg.getSender().toString().equals(contact.toString())) {
+                System.exit(0);
+            }
+        }
     }
 
     protected void uponForwardJoin(ForwardJoin msg, Host from, short sProto, int cId) {

@@ -9,7 +9,7 @@ import java.io.IOException;
 
 public class KillPill extends ProtoMessage {
     static Host sender;
-    public static final short MSG_CODE = 101;
+    public static final short MSG_CODE = 110;
 
     public KillPill(Host sender) {
         super(MSG_CODE);

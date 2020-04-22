@@ -27,7 +27,7 @@ public class HyParView extends GenericProtocol {
     Set<Host> passiveView;
     Set<Host> activeView;
     private int ACTIVE, PASSIVE, ARWL, PRWL, KAS, KPS, ShuffleTTL;
-
+    int hash;
     private static final Logger logger = LogManager.getLogger(HyParView.class);
 
     public HyParView() {
@@ -47,6 +47,11 @@ public class HyParView extends GenericProtocol {
             KAS = Integer.parseInt(props.getProperty("KAS"));
             KPS = Integer.parseInt(props.getProperty("KPS"));
             ShuffleTTL = Integer.parseInt(props.getProperty("ShuffleTTL"));
+
+            String  properties = "ACTIVE" + ACTIVE + "PASSIVE" + PASSIVE + "ARWL" + ARWL + "PRWL" + PRWL +
+                    "KAS"+ KAS + "KPS" + KPS + "ShuffleTTL" + ShuffleTTL;
+
+            hash = properties.hashCode();
 
             activeView = new HashSet<>();
             passiveView = new HashSet();
@@ -132,6 +137,7 @@ public class HyParView extends GenericProtocol {
             for(Host neigh : activeView){
                 if(!neigh.equals(msg.getSender().toString())){
                     sendMessage(new ForwardJoin(myself, msg.getSender(), ARWL),  neigh);
+
                 }
             }
         }

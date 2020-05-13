@@ -33,6 +33,6 @@ public class KillPill extends ProtoMessage {
 
     @Override
     public String toString() {
-        return "Join Message";
+        return "Kill Pill Message";
     }
 }

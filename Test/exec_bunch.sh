@@ -4,7 +4,7 @@ OUTPUT_DIR=out
 CONTACT_PORT=8000
 IP=127.0.0.1
 N=10
-T=30
+T=60
 run_instance() {
   echo -ne "Starting Instance: "$1 "$2" " number: $3 \r"
   java -cp ../target/mambo-1.0-SNAPSHOT-jar-with-dependencies.jar Main "../props/node$3.properties" &> ../output/out${4}/${IP}-${1}.csv  &

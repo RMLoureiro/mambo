@@ -8,7 +8,7 @@
 
 
 #LOGS
-out/*
+output/*
 
 # User-specific stuff
 .idea/**/workspace.xml

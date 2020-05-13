@@ -117,7 +117,6 @@ public class HyParView extends GenericProtocol {
 
                 //System.out.println(myself.toString());
                 sendMessage(new Join(myself, hash), contact);
-                sendMessage(new FindNeighbour(), new Host(myself.getAddress(), myself.getPort()));
             } catch (Exception e) {
                 e.printStackTrace();
                 //System.out.println("Invalid contact on configuration: '" + props.getProperty("Contact"));
@@ -140,12 +139,10 @@ public class HyParView extends GenericProtocol {
             }
 
             activeView.add(new Host(msg.getSender().getAddress(), msg.getSender().getPort()));
-
             if (activeView.size() > 1) {
                 for (Host neigh : activeView) {
                     if (!neigh.equals(msg.getSender().toString())) {
                         sendMessage(new ForwardJoin(myself, msg.getSender(), ARWL), neigh);
-
                     }
                 }
             }
@@ -158,6 +155,7 @@ public class HyParView extends GenericProtocol {
     protected void uponKillPill(KillPill msg, Host from, short sProto, int cId) {
         if(contact != null){
             if(msg.getSender().toString().equals(contact.toString())) {
+                System.out.println("Kill pill, wrong arguments");
                 System.exit(0);
             }
         }
@@ -422,7 +420,7 @@ public class HyParView extends GenericProtocol {
         }
 
         System.out.println(debug);
-
+        /**
         debug = "";
         Iterator<Host> passive = passiveView.iterator();
          for(int i = 0; i<PASSIVE;i++) {
@@ -438,5 +436,6 @@ public class HyParView extends GenericProtocol {
              }
          }
         System.out.println(debug);
+         **/
     }
 }

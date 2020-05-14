@@ -12,8 +12,9 @@ run_instance() {
 
 rm -r ../output
 mkdir ../output
+killall java
 
-for ((j=0; j<=0; j++))
+for ((j=0; j<=10; j++))
   do
     echo "TEST "$j
     mkdir ../output/out${j}

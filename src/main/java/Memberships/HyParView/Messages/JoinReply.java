@@ -35,12 +35,14 @@ public class JoinReply extends ProtoMessage {
         @Override
         public JoinReply deserialize(ByteBuf in) throws IOException {
             Host host = Host.serializer.deserialize(in);
-            int hash = in.readInt();
-            return new JoinReply(host, hash);
+            int code = in.readInt();
+            return new JoinReply(host, code);
         }
     };
 
     public Host getSender(){ return sender;}
+
+    public Host getNewNode(){ return  newNode;}
 
     public int getHash(){ return hash;}
 

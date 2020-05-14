@@ -19,28 +19,24 @@ public class NeighbourAcc extends ProtoMessage {
         this.newNode = newNode;
     }
 
-    public NeighbourAcc(Host sender, int hash) {
-        super(MSG_CODE);
-        this.sender = sender;
-        this.hash = hash;
-    }
-
     public static final ISerializer<ProtoMessage> serializer = new ISerializer<ProtoMessage>() {
         @Override
         public void serialize(ProtoMessage message, ByteBuf out) throws IOException {
-            Host.serializer.serialize(sender, out);
             out.writeInt(hash);
+            Host.serializer.serialize(sender, out);
         }
 
         @Override
         public NeighbourAcc deserialize(ByteBuf in) throws IOException {
             Host host = Host.serializer.deserialize(in);
-            int hash = in.readInt();
-            return new NeighbourAcc(host, hash);
+            int code = in.readInt();
+            return new NeighbourAcc(host, code, null);
         }
     };
 
     public Host getSender(){ return sender;}
+
+    public Host getNewNode(){ return  newNode;}
 
     public int getHash(){ return hash;}
 

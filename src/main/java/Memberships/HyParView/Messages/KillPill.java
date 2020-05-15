@@ -8,7 +8,7 @@ import network.data.Host;
 import java.io.IOException;
 
 public class KillPill extends ProtoMessage {
-    static Host sender;
+    private final Host sender;
     public static final short MSG_CODE = 110;
 
     public KillPill(Host sender) {
@@ -19,7 +19,8 @@ public class KillPill extends ProtoMessage {
     public static final ISerializer<ProtoMessage> serializer = new ISerializer<ProtoMessage>() {
         @Override
         public void serialize(ProtoMessage message, ByteBuf out) throws IOException {
-            Host.serializer.serialize(sender, out);
+            KillPill msg = (KillPill) message;
+            Host.serializer.serialize(msg.sender, out);
         }
 
         @Override

@@ -11,10 +11,10 @@ import java.util.HashSet;
 
 public class Shuffle extends ProtoMessage {
 
-    static Host sender, origin;
+    private final Host sender, origin;
     public static final short MSG_CODE = 108;
-    static int TTL;
-    static HashSet<Host> k;
+    private final int TTL;
+    private final HashSet<Host> k;
 
     public Shuffle(Host sender, Host origin, int TTL, HashSet<Host> k) {
         super(MSG_CODE);
@@ -27,26 +27,27 @@ public class Shuffle extends ProtoMessage {
     public static final ISerializer<ProtoMessage> serializer = new ISerializer<ProtoMessage>() {
         @Override
         public void serialize(ProtoMessage message, ByteBuf out) throws IOException {
-            Host.serializer.serialize(sender, out);
-            Host.serializer.serialize(origin, out);
-            out.writeInt(TTL);
-            out.writeInt(k.size());
-            for(Host neigh : k){
+            Shuffle msg = (Shuffle) message;
+            Host.serializer.serialize(msg.sender, out);
+            Host.serializer.serialize(msg.origin, out);
+            out.writeInt(msg.TTL);
+            out.writeInt(msg.k.size());
+            for(Host neigh : msg.k){
                 Host.serializer.serialize(neigh, out);
             }
         }
 
         @Override
         public Shuffle deserialize(ByteBuf in) throws IOException {
-            Host sender = Host.serializer.deserialize(in);
-            Host origin = Host.serializer.deserialize(in);
-            int TTL = in.readInt();
+            Host host = Host.serializer.deserialize(in);
+            Host starter = Host.serializer.deserialize(in);
+            int ttl = in.readInt();
             int c = in.readInt();
-            HashSet<Host> k = new HashSet<>();
+            HashSet<Host> set = new HashSet<>();
             for(int i = 0; i < c; i++){
-                k.add(Host.serializer.deserialize((in)));
+                set.add(Host.serializer.deserialize((in)));
             }
-            return new Shuffle(sender, origin, TTL, k);
+            return new Shuffle(host, starter, ttl, set);
         }
     };
 

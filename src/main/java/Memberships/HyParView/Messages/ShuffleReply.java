@@ -11,9 +11,9 @@ import java.util.HashSet;
 
 public class ShuffleReply extends ProtoMessage {
 
-    static Host sender;
+    private final Host sender;
     public static final short MSG_CODE = 109;
-    static HashSet<Host> k, kRply;
+    private final HashSet<Host> k, kRply;
 
     public ShuffleReply(Host sender, HashSet<Host> k, HashSet<Host> kRply) {
         super(MSG_CODE);
@@ -25,32 +25,33 @@ public class ShuffleReply extends ProtoMessage {
     public static final ISerializer<ProtoMessage> serializer = new ISerializer<ProtoMessage>() {
         @Override
         public void serialize(ProtoMessage message, ByteBuf out) throws IOException {
-            Host.serializer.serialize(sender, out);
-            out.writeInt(k.size());
-            for(Host neigh : k){
+            ShuffleReply msg = (ShuffleReply) message;
+            Host.serializer.serialize(msg.sender, out);
+            out.writeInt(msg.k.size());
+            for(Host neigh : msg.k){
                 Host.serializer.serialize(neigh, out);
             }
-            out.writeInt(kRply.size());
-            for(Host neigh : kRply){
+            out.writeInt(msg.kRply.size());
+            for(Host neigh : msg.kRply){
                 Host.serializer.serialize(neigh, out);
             }
         }
 
         @Override
         public ShuffleReply deserialize(ByteBuf in) throws IOException {
-            Host sender = Host.serializer.deserialize(in);
+            Host host = Host.serializer.deserialize(in);
             int c = in.readInt();
-            HashSet<Host> k = new HashSet<>();
+            HashSet<Host> set = new HashSet<>();
             for(int i = 0; i < c; i++){
-                k.add(Host.serializer.deserialize((in)));
+                set.add(Host.serializer.deserialize((in)));
             }
             c = in.readInt();
-            HashSet<Host> kRply = new HashSet<>();
+            HashSet<Host> setRply = new HashSet<>();
             for(int i = 0; i < c; i++){
-                kRply.add(Host.serializer.deserialize((in)));
+                setRply.add(Host.serializer.deserialize((in)));
             }
 
-            return new ShuffleReply(sender, k, kRply);
+            return new ShuffleReply(host, set, setRply);
         }
     };
 

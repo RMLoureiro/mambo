@@ -28,7 +28,7 @@ public class HyParView extends GenericProtocol {
 
     Set<Host> passiveView;
     Set<Host> activeView;
-    Map<Integer, ToBeAcked> toBeAcknowledged;
+    //Map<Integer, ToBeAcked> toBeAcknowledged;
 
     private int ACTIVE, PASSIVE, ARWL, PRWL, KAS, KPS, ShuffleTTL;
     private boolean shuffle = false;
@@ -60,10 +60,10 @@ public class HyParView extends GenericProtocol {
 
             activeView = new HashSet<>();
             passiveView = new HashSet();
-            toBeAcknowledged = new ConcurrentHashMap<>();
+//            toBeAcknowledged = new ConcurrentHashMap<>();
 
             //System.out.println(InetAddress.getByName(props.getProperty("address")) + props.getProperty("port"));
-            channelId = createChannel("TCP", props);
+            channelId = createChannel("Ackos", props);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -113,14 +113,9 @@ public class HyParView extends GenericProtocol {
         registerMessageHandler(channelId, ShuffleReply.MSG_CODE, this::uponShuffleReply,
                 this::uponMessageSent, this::uponMessageFailed);
 
-        registerMessageSerializer(Ack.MSG_CODE, Ack.serializer);
-        registerMessageHandler(channelId, Ack.MSG_CODE, this::uponAck,
-                this::uponMessageSent, this::uponMessageFailed);
-
 
         registerTimerHandler(Views.TIMER_CODE, this::uponViews);
         registerTimerHandler(ShuffleT.TIMER_CODE, this::uponShuffleTimer);
-        registerTimerHandler(CheckAcks.TIMER_CODE, this::uponCheckAcksTimer);
 
 
         registerChannelEventHandler(channelId, NodeDownEvent.EVENT_ID, this::uponNodeDown);
@@ -143,23 +138,26 @@ public class HyParView extends GenericProtocol {
 
         setupPeriodicTimer( new Views(), 1000, 1000);
         setupPeriodicTimer( new ShuffleT(), 4500, 5000);
-        setupPeriodicTimer( new CheckAcks(), 200, 200);
+        //setupPeriodicTimer( new CheckAcks(), 200, 200);
 
     }
 
     protected void uponJoin(Join msg, Host from, short sProto, int cId) {
         //System.out.println("Received: " + msg.toString() + " from " + msg.getSender().toString());
-
-        if(msg.getHash() == hashStart) {
+        int hash = msg.getHash();
+        if(hash == hashStart) {
             while (activeView.size() >= ACTIVE) {
                 dropRandomFromActive(null);
             }
             Host newNode = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
+
             activeView.add(newNode);
-            System.out.println("join added new node" + newNode.toString());
+//            removedHash(newNode, "join");
+
+//            System.out.println("join added new node" + newNode.toString());
             if (activeView.size() > 1) {
                 for (Host neigh : activeView) {
-                    if (!neigh.equals(msg.getSender().toString())) {
+                    if (!neigh.equals(newNode.toString())) {
                         sendMessage(new ForwardJoin(myself, newNode, ARWL), neigh);
                     }
                 }
@@ -169,6 +167,17 @@ public class HyParView extends GenericProtocol {
         }
 
     }
+
+    /**
+    private void removedHash(Host newNode, String reason) {
+        for(int hash: toBeAcknowledged.keySet()){
+            ToBeAcked tba = toBeAcknowledged.get(hash);
+            if(tba.getHost().equals(newNode)){
+                System.out.println("removed hash: " + hash + " from node: " + tba.getHost() + " because of " + reason);
+                toBeAcknowledged.remove(hash);
+            }
+        }
+    }**/
 
     protected void uponKillPill(KillPill msg, Host from, short sProto, int cId) {
         if(contact != null){
@@ -181,59 +190,61 @@ public class HyParView extends GenericProtocol {
 
     protected void uponForwardJoin(ForwardJoin msg, Host from, short sProto, int cId) {
         //System.out.println("Received: " + msg.toString() + " from " + msg.getSender().toString());
-        if((activeView.size() <= 1 || msg.getTTL() == 0) && !activeView.contains(msg.getNewNode()) && !msg.getNewNode().equals(myself)){
+        Host newNode =  new Host(msg.getNewNode().getAddress(), msg.getNewNode().getPort());
+        Host sender = new Host(msg.getSender().getAddress(), msg.getNewNode().getPort());
+        int ttl = msg.getTTL();
+        if((activeView.size() <= 1 || ttl == 0) && !activeView.contains(newNode) && !newNode.equals(myself)){
             while (activeView.size() >= ACTIVE) {
                 dropRandomFromActive(null);
             }
 
-            Host newNode =  new Host(msg.getNewNode().getAddress(), msg.getNewNode().getPort());
             activeView.add(newNode);
 
             Random rnd = new Random();
-            int hash = Math.abs(rnd.nextInt() * myself.toString().hashCode());
-            JoinReply joinReply = new JoinReply(myself, hash, newNode);
-            toBeAcknowledged.put(hash, new ToBeAcked(newNode, hash, joinReply.getId()));
+            JoinReply joinReply = new JoinReply(myself);
 
-            System.out.println("forwardJoin added: " + newNode.toString() + " hashCode: " + hash);
+//            System.out.println("forwardJoin added: " + newNode.toString());
 
             sendMessage(joinReply, newNode);
 
-        }else if((msg.getTTL() == PRWL) && !activeView.contains(msg.getNewNode()) && !msg.getNewNode().equals(myself)){
+        }else if((ttl == PRWL) && !activeView.contains(newNode) && !newNode.equals(myself)){
             if(passiveView.size() >= PASSIVE){
                 dropRandomFromPassive();
             }
 
-            passiveView.add(msg.getNewNode());
+            passiveView.add(newNode);
         }
 
         if(msg.getTTL() > 0){
             Random r = new Random();
             HashSet<Host> tmp = new HashSet(activeView);
 
-            tmp.remove(msg.getSender());
-            tmp.remove(msg.getNewNode());
+            tmp.remove(sender);
+            tmp.remove(newNode);
 
             if(!tmp.isEmpty()){
                 int i = r.nextInt(tmp.size());
-                sendMessage(new ForwardJoin(myself, msg.getNewNode(), msg.getTTL() - 1), (Host) tmp.toArray()[i]);
+                sendMessage(new ForwardJoin(myself, newNode, ttl - 1), (Host) tmp.toArray()[i]);
             }
         }
     }
 
     protected void uponJoinReply(JoinReply msg, Host from, short sProto, int cId) {
         //System.out.println("Received: " + msg.toString() + " from " + msg.getSender().toString());
+        Host sender = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
         while(activeView.size() >= ACTIVE){
             dropRandomFromActive(null);
         }
-        passiveView.remove(msg.getSender());
-        activeView.add(new Host(msg.getSender().getAddress(), msg.getSender().getPort()));
-        sendMessage(new Ack(msg.getHash(), myself), msg.getSender());
-        System.out.println("join reply added " + msg.getSender() + " with hash " + msg.getHash());
+        passiveView.remove(sender);
+        activeView.add(sender);
+//        System.out.println("join reply added " + sender);
     }
 
     protected void uponNeighbourReq(NeighbourReq msg, Host from, short sProto, int cId) {
-        if(!activeView.contains(msg.getSender())) {
-            if (activeView.size() >= ACTIVE && msg.getPriority() > 0) {
+        Host newNode = msg.getSender();
+        int priority = msg.getPriority();
+        if(!activeView.contains(newNode)) {
+            if (activeView.size() >= ACTIVE && priority > 0) {
                 while (activeView.size() >= ACTIVE) {
                     dropRandomFromActive(null);
                 }
@@ -241,33 +252,28 @@ public class HyParView extends GenericProtocol {
 
             if (activeView.size() < ACTIVE) {
 
-                Random rnd = new Random();
-                int hash = Math.abs(rnd.nextInt() * myself.toString().hashCode());
-                Host newNode = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
-
                 activeView.add(newNode);
                 passiveView.remove(newNode);
 
-                NeighbourAcc neighbourAcc = new NeighbourAcc(myself, hash);
-                toBeAcknowledged.put(hash, new ToBeAcked(newNode, hash, neighbourAcc.getId()));
+                NeighbourAcc neighbourAcc = new NeighbourAcc(myself);
 
                 sendMessage(neighbourAcc, newNode);
-                System.out.println("neighbourReq added " + newNode + " hashCode: " + hash);
+//                System.out.println("neighbourReq added " + newNode);
 
             } else {
-                sendMessage(new NeighbourRej(myself), msg.getSender());
+                sendMessage(new NeighbourRej(myself), newNode);
             }
         }
     }
 
     protected void uponNeighbourAcc(NeighbourAcc msg, Host from, short sProto, int cId) {
+        Host newNode = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
         while (activeView.size() >= ACTIVE) {
             dropRandomFromActive(null);
         }
-        activeView.add(new Host(msg.getSender().getAddress(), msg.getSender().getPort()));
-        System.out.println("neighbour accept added: " + msg.getSender().toString() + " hashCode: " + msg.getHash());
+        activeView.add(newNode);
+//        System.out.println("neighbour accept added: " + newNode);
         passiveView.remove(msg.getSender());
-        sendMessage(new Ack(msg.getHash(), myself), new Host(msg.getSender().getAddress(), msg.getSender().getPort()));
     }
 
     protected void uponNeighbourRej(NeighbourRej msg, Host from, short sProto, int cId) {
@@ -277,6 +283,7 @@ public class HyParView extends GenericProtocol {
 
     private void uponShuffleTimer(ShuffleT timer, long uId) {
         shuffle = true;
+        shuffle();
     }
 
     private void shuffle() {
@@ -297,73 +304,43 @@ public class HyParView extends GenericProtocol {
 
             k.addAll(kp);
             sendMessage(new Shuffle(myself, myself, ShuffleTTL, k), n);
-            System.out.println("seending shuffle to: " + n);
+//            System.out.println("seending shuffle to: " + n);
             uponViews(new Views(), 0);
-        }
-    }
-
-    private void uponCheckAcksTimer(CheckAcks timer, long uId) {
-        if(!toBeAcknowledged.isEmpty()){
-            for(int hash : toBeAcknowledged.keySet()){
-                ToBeAcked msg = toBeAcknowledged.get(hash);
-                if(msg.getCode() == 103){
-                    if(activeView.contains(msg.getHost())){
-                        sendMessage(new JoinReply(myself, hash), msg.getHost());
-                        System.out.println("resending join reply code:" + hash + " to: " + msg.getHost());
-                    }else {
-                        toBeAcknowledged.remove(hash);
-                    }
-                }else if(msg.getCode() == 106) {
-                    if(activeView.contains(msg.getHost())) {
-                        sendMessage(new NeighbourAcc(myself, hash), msg.getHost());
-                        System.out.println("resending neighbourAcc code:" + hash + " to: " + msg.getHost());
-                    }else{
-                        toBeAcknowledged.remove(hash);
-                    }
-                }else if(msg.getCode() == 111) {
-                    sendMessage(new Disconnect(myself, msg.getHash()), msg.getHost());
-                    System.out.println("resending disconnect code:" + hash + " to: " + msg.getHost());
-                }else{
-                    System.out.println("something good is not right code: " + msg.getHost());
-                }
-            }
-        }
-        if(shuffle){
-            shuffle();
-            shuffle = false;
         }
     }
 
     protected void uponShuffle(Shuffle msg, Host from, short sProto, int cId) {
         int ttl = msg.getTTL() - 1;
-
+        Host sender = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
+        Host origin = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
+        HashSet<Host> k = new HashSet<>(msg.getK());
         if(ttl > 0){
             HashSet<Host> tmp = new HashSet(activeView);
-            tmp.remove(msg.getSender());
-            tmp.remove(msg.getOrigin());
+            tmp.remove(sender);
+            tmp.remove(origin);
 
             if(tmp.isEmpty()){
                 return;
             }else{
                 Random rnd = new Random();
                 Host n = (Host) tmp.toArray()[rnd.nextInt(tmp.size())];
-                sendMessage(new Shuffle(myself, msg.getOrigin(), ttl, msg.getK()), n);
+                sendMessage(new Shuffle(myself, origin, ttl, k), n);
             }
         }else{
             HashSet<Host> kRply = new HashSet<>();
             Iterator<Host> it = passiveView.iterator();
             Host tmp;
 
-            while(it.hasNext() && kRply.size() < msg.getK().size()){
+            while(it.hasNext() && kRply.size() < k.size()){
                 tmp = it.next();
                 if(!msg.getK().contains(tmp)){
                     kRply.add(tmp);
                 }
             }
 
-            sendMessage(new ShuffleReply(myself, msg.getK(), kRply), msg.getOrigin());
+            sendMessage(new ShuffleReply(myself, k, kRply), origin);
 
-            it = msg.getK().iterator();
+            it = k.iterator();
             Iterator<Host> it2 = kRply.iterator();
             while (it.hasNext()) {
                 tmp = it.next();
@@ -383,8 +360,11 @@ public class HyParView extends GenericProtocol {
 
     protected void uponShuffleReply(ShuffleReply msg, Host from, short sProto, int cId) {
         Iterator<Host> it, it2;
-        it = msg.getKRply().iterator();
-        it2 = msg.getK().iterator();
+        HashSet<Host> k = new HashSet<>(msg.getK());
+        HashSet<Host> kReply = new HashSet<>(msg.getKRply());
+
+        it = k.iterator();
+        it2 = kReply.iterator();
         Host tmp, tmp2;
 
         while(it.hasNext()){
@@ -407,32 +387,8 @@ public class HyParView extends GenericProtocol {
     protected void uponDisconnect(Disconnect msg, Host from, short sProto, int cId) {
         Host del = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
         activeView.remove(del);
-        System.out.println("disconnect from: " + msg.getSender() + " with hash " + msg.getHash());
-        if(msg.getHash() != -1){
-            sendMessage(new Ack(msg.getHash(), myself), del);
-        }else {
-            closeConnection(from);
-        }
-    }
-
-    protected void uponAck(Ack msg, Host from, short sProto, int cId) {
-        if(toBeAcknowledged.containsKey(msg.getHash())) {
-            ToBeAcked tba = toBeAcknowledged.remove(msg.getHash());
-            System.out.println("removed hash: " + msg.getHash());
-            if(!activeView.contains(msg.getSender())) {
-                if (tba.getCode() == 111) {
-                    closeConnection(msg.getSender());
-                }else{
-                    sendMessage(new Disconnect(myself, -1), msg.getSender());
-                }
-            }
-        }else{
-            System.out.println("hash code: " + msg.getHash() + " not found from: " + msg.getSender().toString());
-        }
-        if(!activeView.contains(msg.getSender())){
-            System.out.println("received ack from someone not in active " + msg.getSender());
-            sendMessage(new Disconnect(myself, -1), msg.getSender());
-        }
+//        System.out.println("disconnect from: " + del);
+        closeConnection(from);
     }
 
     protected void uponFindNeighbour(FindNeighbour msg, Host from, short sProto, int cId) {
@@ -483,11 +439,8 @@ public class HyParView extends GenericProtocol {
         activeView.remove(del);
         passiveView.add(del);
 
-        int hash = Math.abs(rnd.nextInt() * myself.toString().hashCode());
-
-        Disconnect dc = new Disconnect(myself, hash);
-        toBeAcknowledged.put(hash, new ToBeAcked(del, hash, dc.getId()));
-        System.out.println("removed: " + del.toString() + " with hash: " + hash);
+        Disconnect dc = new Disconnect(myself);
+//        System.out.println("removed: " + del.toString());
         sendMessage(dc, new Host(del.getAddress(), del.getPort()));
     }
 
@@ -501,7 +454,7 @@ public class HyParView extends GenericProtocol {
     protected void uponJoinSent(ProtoMessage msg, Host to, short destProto, int channelId){
         //System.out.println("Sent: " + msg.toString() + " to " + to.toString());
         activeView.add(to);
-        System.out.println("added contact: " + to.toString());
+//        System.out.println("added contact: " + to.toString());
     }
 
     protected void uponDisconnectSent(ProtoMessage msg, Host to, short destProto, int channelId){
@@ -519,13 +472,13 @@ public class HyParView extends GenericProtocol {
         int hash = Math.abs(rnd.nextInt() * myself.toString().hashCode());
         Disconnect dc = new Disconnect(myself, hash);
         sendMessage(dc, to);**/
-        System.out.println("Message Failed: " + to.toString() + msg.toString());
+//        System.out.println("Message Failed: " + to.toString() + msg.toString());
     }
 
     private void uponNodeDown(NodeDownEvent<ProtoMessage> evt, int channelId) {
         //System.out.println("Disconnect: " + evt.getNode().toString());
         activeView.remove(evt.getNode());
-        System.out.println("node down :" + evt.getNode().toString());
+//        System.out.println("node down :" + evt.getNode().toString());
         closeConnection(evt.getNode());
     }
 

@@ -8,8 +8,8 @@ import network.data.Host;
 import java.io.IOException;
 
 public class Join extends ProtoMessage {
-    static Host sender;
-    static int hash;
+    private final Host sender;
+    private final int hash;
     public static final short MSG_CODE = 101;
 
     public Join(Host sender, int hash) {
@@ -21,15 +21,16 @@ public class Join extends ProtoMessage {
     public static final ISerializer<ProtoMessage> serializer = new ISerializer<ProtoMessage>() {
         @Override
         public void serialize(ProtoMessage message, ByteBuf out) throws IOException {
-            Host.serializer.serialize(sender, out);
-            out.writeInt(hash);
+            Join msg = (Join) message;
+            Host.serializer.serialize(msg.sender, out);
+            out.writeInt(msg.hash);
         }
 
         @Override
         public Join deserialize(ByteBuf in) throws IOException {
             Host host = Host.serializer.deserialize(in);
-            int hash = in.readInt();
-            return new Join(host, hash);
+            int code = in.readInt();
+            return new Join(host, code);
         }
     };
 

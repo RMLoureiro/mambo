@@ -100,10 +100,11 @@ def timeToConverge():
         start = datetime.datetime(start[0], start[1], start[2], start[3], start[4], start[5])
         
         print("Convergence Time: ", time - start)
+        print("Your code did good and you should feel proud")
     
     
 size = 5
-nodes = 31
+nodes = 51
 mypath = sys.argv[1]
 nedges = -1
 edges = None

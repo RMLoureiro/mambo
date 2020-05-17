@@ -3,7 +3,7 @@
 OUTPUT_DIR=out
 CONTACT_PORT=8000
 IP=127.0.0.1
-N=50
+N=10
 T=30
 run_instance() {
   echo -ne "Starting Instance: "$1 "$2" " number: $3 \r"
@@ -14,7 +14,7 @@ rm -r ../output
 mkdir ../output
 killall java
 
-for ((j=0; j<=30; j++))
+for ((j=0; j<=0; j++))
   do
     echo "TEST "$j
     mkdir ../output/out${j}

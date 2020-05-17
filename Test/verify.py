@@ -22,8 +22,18 @@ def logsToData():
     global fullData
     for i in range(0, nodes):
         file = open(sys.argv[1] + logs[i], "r")
-        data = list(csv.reader(file, delimiter = ','))
-        data.pop(0)
+        logedFile = open(file.name[:-4] + "-LOGS.csv" , "x")
+        
+        lines = file.readlines()
+        for line in lines:
+            if line[:4] == "LOGS":
+                logedFile.write(line[5:])
+                
+        logedFile.close()
+        logedFile = open(file.name[:-4] + "-LOGS.csv" , "r")
+
+        data = list(csv.reader(logedFile, delimiter = ','))
+        
         actives[i] = data[-1]
         fullData[i] = data
         
@@ -100,11 +110,10 @@ def timeToConverge():
         start = datetime.datetime(start[0], start[1], start[2], start[3], start[4], start[5])
         
         print("Convergence Time: ", time - start)
-        print("Your code did good and you should feel proud")
     
     
 size = 5
-nodes = 51
+nodes = 11
 mypath = sys.argv[1]
 nedges = -1
 edges = None

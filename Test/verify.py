@@ -117,7 +117,7 @@ def timeToConverge():
     
     
 size = 5
-nodes = 31
+nodes = 11
 mypath = sys.argv[1]
 nedges = -1
 edges = None

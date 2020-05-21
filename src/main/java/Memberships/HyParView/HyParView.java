@@ -135,7 +135,7 @@ public class HyParView extends GenericProtocol {
         sendMessage(new FindNeighbour(), myself);
 
         setupPeriodicTimer( new Views(), 1000, 1000);
-        setupPeriodicTimer( new ShuffleT(), 4500, 5000);
+        setupPeriodicTimer( new ShuffleT(), 5000, 1000);
         //setupPeriodicTimer( new CheckAcks(), 200, 200);
 
     }
@@ -175,6 +175,11 @@ public class HyParView extends GenericProtocol {
     }
 
     protected void uponForwardJoin(ForwardJoin msg, Host from, short sProto, int cId) {
+        if(!activeView.contains(msg.getSender())) {
+            System.out.println("LOGS-received forward join from a node not in active " + msg.getSender());
+            sendMessage(new Disconnect(myself), msg.getSender());
+            return;
+        }
         //System.out.println("Received: " + msg.toString() + " from " + msg.getSender().toString());
         Host newNode =  new Host(msg.getNewNode().getAddress(), msg.getNewNode().getPort());
         Host sender = new Host(msg.getSender().getAddress(), msg.getNewNode().getPort());
@@ -303,7 +308,11 @@ public class HyParView extends GenericProtocol {
     }
 
     protected void uponShuffle(Shuffle msg, Host from, short sProto, int cId) {
-        if(activeView.contains(msg.getSender())) {
+        if(!activeView.contains(msg.getSender())) {
+            System.out.println("LOGS-received shuffle from a node not in active " + msg.getSender());
+            sendMessage(new Disconnect(myself), msg.getSender());
+            return;
+        }
             int ttl = msg.getTTL() - 1;
             Host sender = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
             Host origin = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
@@ -349,10 +358,6 @@ public class HyParView extends GenericProtocol {
                     }
                 }
             }
-        }else{
-            System.out.println("LOGS-received shuffle from a node not in active " + msg.getSender());
-            sendMessage(new Disconnect(myself), msg.getSender());
-        }
     }
 
     protected void uponShuffleReply(ShuffleReply msg, Host from, short sProto, int cId) {
@@ -386,7 +391,7 @@ public class HyParView extends GenericProtocol {
         activeView.remove(del);
         passiveView.add(del);
         System.out.println("LOGS-disconnect from: " + del);
-        //closeConnection(del);
+        closeConnection(del);
     }
 
     protected void uponFindNeighbour(FindNeighbour msg, Host from, short sProto, int cId) {

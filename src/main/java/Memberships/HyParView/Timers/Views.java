@@ -1,8 +1,6 @@
-package Memberships.HyParView.Timer;
+package Memberships.HyParView.Timers;
 
 import babel.generic.ProtoTimer;
-
-import javax.swing.text.View;
 
 public class Views extends ProtoTimer {
 

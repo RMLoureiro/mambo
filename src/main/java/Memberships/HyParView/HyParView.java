@@ -1,8 +1,8 @@
 package Memberships.HyParView;
 
 import Memberships.HyParView.Messages.*;
-import Memberships.HyParView.Timer.ShuffleT;
-import Memberships.HyParView.Timer.Views;
+import Memberships.HyParView.Timers.ShuffleT;
+import Memberships.HyParView.Timers.Views;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.GenericProtocol;
 import babel.generic.ProtoMessage;
@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.*;
 

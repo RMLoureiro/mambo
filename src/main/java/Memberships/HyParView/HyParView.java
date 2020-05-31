@@ -1,5 +1,6 @@
 package Memberships.HyParView;
 
+import Gossip.Gossip;
 import Memberships.HyParView.Messages.*;
 import Memberships.HyParView.Timer.ShuffleT;
 import Memberships.HyParView.Timer.Views;
@@ -23,6 +24,8 @@ public class HyParView extends Membership {
     public static short PROTOCOL_ID = 100;
     public static String PROTOCOL_NAME = "HPV";
 
+    Gossip gossip;
+
     Host myself, contact = null;
     int channelId;
 
@@ -34,8 +37,9 @@ public class HyParView extends Membership {
     int hashStart;
     private static final Logger logger = LogManager.getLogger(HyParView.class);
 
-    public HyParView() {
+    public HyParView(Gossip gossip) {
         super(PROTOCOL_NAME, PROTOCOL_ID);
+        this.gossip = gossip;
     }
 
     public void init(Properties props) throws HandlerRegistrationException {

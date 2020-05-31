@@ -3,6 +3,7 @@ package Memberships.HyParView;
 import Memberships.HyParView.Messages.*;
 import Memberships.HyParView.Timer.ShuffleT;
 import Memberships.HyParView.Timer.Views;
+import Memberships.Membership;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.GenericProtocol;
 import babel.generic.ProtoMessage;
@@ -17,7 +18,7 @@ import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.*;
 
-public class HyParView extends GenericProtocol {
+public class HyParView extends Membership {
 
     public static short PROTOCOL_ID = 100;
     public static String PROTOCOL_NAME = "HPV";
@@ -526,4 +527,5 @@ public class HyParView extends GenericProtocol {
         System.out.println(debug);
          **/
     }
+
 }

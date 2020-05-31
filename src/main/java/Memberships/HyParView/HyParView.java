@@ -25,7 +25,7 @@ public class HyParView extends GenericProtocol {
     int channelId;
 
     Set<Host> passiveView;
-    Set<Host> potetntialNeighbours;
+    Set<Host> potentialNeighbours;
     Set<Host> activeView;
 
     private int ACTIVE, PASSIVE, ARWL, PRWL, KAS, KPS, ShuffleTTL;
@@ -58,7 +58,7 @@ public class HyParView extends GenericProtocol {
 
             activeView = new HashSet<>();
             passiveView = new HashSet();
-            potetntialNeighbours = new HashSet<>();
+            potentialNeighbours = new HashSet<>();
 
             channelId = createChannel("TCP", props);
         } catch (IOException e) {
@@ -186,7 +186,7 @@ public class HyParView extends GenericProtocol {
 
             activeView.add(newNode);
             passiveView.remove(newNode);
-            potetntialNeighbours.remove(newNode);
+            potentialNeighbours.remove(newNode);
 
             JoinReply joinReply = new JoinReply(myself);
 
@@ -223,7 +223,7 @@ public class HyParView extends GenericProtocol {
                 dropRandomFromActive(null);
             }
             passiveView.remove(sender);
-            potetntialNeighbours.remove(sender);
+            potentialNeighbours.remove(sender);
             activeView.add(sender);
             System.out.println("LOGS-join reply added " + sender);
         }else{
@@ -245,7 +245,7 @@ public class HyParView extends GenericProtocol {
 
                 activeView.add(newNode);
                 passiveView.remove(newNode);
-                potetntialNeighbours.remove(newNode);
+                potentialNeighbours.remove(newNode);
 
                 NeighbourAcc neighbourAcc = new NeighbourAcc(myself);
 
@@ -268,7 +268,7 @@ public class HyParView extends GenericProtocol {
             }
             activeView.add(newNode);
             passiveView.remove(newNode);
-            potetntialNeighbours.remove(newNode);
+            potentialNeighbours.remove(newNode);
             System.out.println("LOGS-neighbour accept added: " + newNode);
         }else{
             System.out.println("LOGS-Received accept message from someone in active; " + newNode);
@@ -347,8 +347,9 @@ public class HyParView extends GenericProtocol {
                     if (!passiveView.contains(tmp) && !activeView.contains(tmp) && !tmp.equals(myself)) {
                         if (passiveView.size() >= PASSIVE) {
                             if (it2.hasNext()) {
-                                passiveView.remove(it2.next());
-                                potetntialNeighbours.remove(it2.next());
+                                Host del = it2.next();
+                                passiveView.remove(del);
+                                potentialNeighbours.remove(del);
                             } else {
                                 dropRandomFromPassive();
                             }
@@ -375,7 +376,7 @@ public class HyParView extends GenericProtocol {
                     if (it2.hasNext()) {
                         tmp2 = it2.next();
                         passiveView.remove(tmp2);
-                        potetntialNeighbours.remove(tmp2);
+                        potentialNeighbours.remove(tmp2);
                     } else {
                         dropRandomFromPassive();
                     }
@@ -391,13 +392,14 @@ public class HyParView extends GenericProtocol {
         activeView.remove(del);
         passiveView.add(del);
         System.out.println("LOGS-disconnect from: " + del);
+
         closeConnection(del);
     }
 
     protected void uponFindNeighbour(FindNeighbour msg, Host from, short sProto, int cId) {
         if(activeView.size() == ACTIVE) {
             return;
-        } else if(potetntialNeighbours.isEmpty()){
+        } else if(potentialNeighbours.isEmpty()){
             return;
         }
 
@@ -413,12 +415,12 @@ public class HyParView extends GenericProtocol {
         int c = ACTIVE - activeView.size();
         Host h;
 
-        while(!potetntialNeighbours.isEmpty() && c > 0) {
-            int i = rnd.nextInt(potetntialNeighbours.size());
-            h = (Host) potetntialNeighbours.toArray()[i];
-            System.out.println("sending neighbour request to " + h);
+        while(!potentialNeighbours.isEmpty() && c > 0) {
+            int i = rnd.nextInt(potentialNeighbours.size());
+            h = (Host) potentialNeighbours.toArray()[i];
+            System.out.println("LOGS-sending neighbour request to " + h);
             sendMessage(new NeighbourReq(myself,priority), h);
-            potetntialNeighbours.remove(h);
+            potentialNeighbours.remove(h);
             priority--;
         }
     }
@@ -448,7 +450,7 @@ public class HyParView extends GenericProtocol {
         int i = rnd.nextInt(passiveView.size());
         Host del = (Host) passiveView.toArray()[i];
         passiveView.remove(del);
-        potetntialNeighbours.remove(del);
+        potentialNeighbours.remove(del);
     }
 
     protected void uponJoinSent(ProtoMessage msg, Host to, short destProto, int channelId){
@@ -457,19 +459,16 @@ public class HyParView extends GenericProtocol {
     }
 
     protected void uponDisconnectSent(ProtoMessage msg, Host to, short destProto, int channelId){ ;
-        closeConnection(to);
+        //closeConnection(to);
     }
 
     protected void uponMessageSent(ProtoMessage msg, Host to, short destProto, int channelId){
         //System.out.println("Sent: " + msg.toString() + " to " + to.toString());
     }
     protected void uponMessageFailed(ProtoMessage msg, Host to, short destProto, Throwable cause, int channelId) {
-        /**activeView.remove(to);
-        passiveView.add(to);
-        Random rnd = new Random();
-        int hash = Math.abs(rnd.nextInt() * myself.toString().hashCode());
-        Disconnect dc = new Disconnect(myself, hash);
-        sendMessage(dc, to);**/
+        activeView.remove(to);
+        Disconnect dc = new Disconnect(myself);
+        sendMessage(dc, to);
         System.out.println("LOGS-Message Failed: " + to.toString() + msg.toString());
     }
 
@@ -501,8 +500,10 @@ public class HyParView extends GenericProtocol {
         }
 
         System.out.println(debug);
+
+        potentialNeighbours = new HashSet<>(passiveView);
         if(activeView.size() < ACTIVE && !passiveView.isEmpty()) {
-            potetntialNeighbours = new HashSet<>(passiveView);
+            potentialNeighbours = new HashSet<>(passiveView);
             sendMessage(new FindNeighbour(), myself);
         }
         /**

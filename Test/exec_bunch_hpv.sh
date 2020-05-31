@@ -7,7 +7,7 @@ N=30
 T=30
 run_instance() {
   echo -ne "Starting Instance: "$1 "$2" " number: $3 \r"
-  java -cp ../target/mambo-1.0-SNAPSHOT-jar-with-dependencies.jar Main "../props/node$3.properties" &> ../output/out${4}/${IP}-${1}.csv  &
+  java -cp ../target/mambo-1.0-SNAPSHOT-jar-with-dependencies.jar Main "../props/hpv/node$3.properties" &> ../output/out${4}/${IP}-${1}.csv  &
 }
 
 rm -r ../output

@@ -1,8 +1,10 @@
 package Memberships.HyParView;
 
+import Gossip.Gossip;
 import Memberships.HyParView.Messages.*;
 import Memberships.HyParView.Timers.ShuffleT;
 import Memberships.HyParView.Timers.Views;
+import Memberships.Membership;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.GenericProtocol;
 import babel.generic.ProtoMessage;
@@ -16,10 +18,12 @@ import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.util.*;
 
-public class HyParView extends GenericProtocol {
+public class HyParView extends Membership {
 
     public static short PROTOCOL_ID = 100;
     public static String PROTOCOL_NAME = "HPV";
+
+    Gossip gossip;
 
     Host myself, contact = null;
     int channelId;
@@ -33,8 +37,9 @@ public class HyParView extends GenericProtocol {
     int hashStart;
     private static final Logger logger = LogManager.getLogger(HyParView.class);
 
-    public HyParView() {
+    public HyParView(Gossip gossip) {
         super(PROTOCOL_NAME, PROTOCOL_ID);
+        this.gossip = gossip;
     }
 
     public void init(Properties props) throws HandlerRegistrationException {
@@ -524,4 +529,5 @@ public class HyParView extends GenericProtocol {
         System.out.println(debug);
          **/
     }
+
 }

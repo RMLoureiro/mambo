@@ -1,4 +1,6 @@
+import Gossip.Gossip;
 import Memberships.HyParView.HyParView;
+import Memberships.Membership;
 import babel.Babel;
 
 import java.sql.SQLOutput;
@@ -16,17 +18,9 @@ public class Main {
 
 
     public static void main(String[] args) throws Exception {
-        Babel babel = Babel.getInstance();
-        String[] arguments = Arrays.copyOfRange(args, 1, args.length);
-        Properties configProps = babel.loadConfig(args[0], arguments);
-
-        Thread.sleep(1000);
-
-        HyParView membership = new HyParView();
-        membership.init(configProps);
-        babel.registerProtocol(membership);
-
-
-        babel.start();
+        Gossip gossip = new Gossip(args);
+        /**MessageDigest md = MessageDigest.getInstance("SHA-1");
+        byte[] hash = md.digest("string".getBytes());
+        BigInteger bi = new BigInteger(1, hash);**/
     }
 }

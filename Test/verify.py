@@ -27,6 +27,8 @@ def logsToData():
         
         lines = file.readlines()
         for line in lines:
+            if line[:13] == "LOGS-nodeDown":
+                print("node ", i + 8000, "down")
             if line[:5] == "LOGS,":
                 viewsFile.write(line[5:])
             if line[:4] == "LOGS":

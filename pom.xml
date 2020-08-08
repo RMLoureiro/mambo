@@ -62,7 +62,7 @@
         <dependency>
             <groupId>pt.unl.fct.di.novasys</groupId>
             <artifactId>babel-core</artifactId>
-            <version>0.4.19</version>
+            <version>0.4.23</version>
         </dependency>
 
         <!-- https://mvnrepository.cosm/artifact/org.apache.commons/commons-collections4 -->

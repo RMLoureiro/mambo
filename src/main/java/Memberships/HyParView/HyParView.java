@@ -569,18 +569,7 @@ public class HyParView extends Membership {
 
 
     private void send(ProtoMessage msg, Host to){
-        try {
-            sendMessage(msg, to);
-        }catch (java.util.concurrent.RejectedExecutionException e) {
-            System.out.println("LOGS-nodeDown");
-            activeView = new HashSet<>();
-            printViews();
-            printViews();
-            printViews();
-            printViews();
-            printViews();
-            System.exit(1);
-        }
+        sendMessage(msg, to);
     }
 
     private void close(Host del){

@@ -5,11 +5,12 @@ import Memberships.HyParView.Messages.*;
 import Memberships.HyParView.Timers.ShuffleT;
 import Memberships.HyParView.Timers.Views;
 import Memberships.Membership;
+import babel.core.GenericProtocol;
 import babel.exceptions.HandlerRegistrationException;
-import babel.generic.GenericProtocol;
 import babel.generic.ProtoMessage;
-import channel.tcp.events.InConnectionDown;
-import channel.tcp.events.OutConnectionDown;
+import babel.handlers.ChannelEventHandler;
+import channel.tcp.TCPChannel;
+import channel.tcp.events.*;
 import network.data.Host;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,7 +19,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.util.*;
-import java.util.concurrent.RejectedExecutionException;
 
 public class HyParView extends Membership {
 
@@ -67,53 +67,61 @@ public class HyParView extends Membership {
             passiveView = new HashSet();
             potentialNeighbours = new HashSet<>();
 
-            channelId = createChannel("TCP", props);
+            Properties channelProps = new Properties();
+            channelProps.setProperty(TCPChannel.ADDRESS_KEY, props.getProperty("address")); //The address to bind to
+            channelProps.setProperty(TCPChannel.PORT_KEY, props.getProperty("port")); //The port to bind to
+            channelProps.setProperty(TCPChannel.METRICS_INTERVAL_KEY, "10000"); //The interval to receive channel metrics
+            channelProps.setProperty(TCPChannel.HEARTBEAT_INTERVAL_KEY, "1000"); //Heartbeats interval for established connections
+            channelProps.setProperty(TCPChannel.HEARTBEAT_TOLERANCE_KEY, "3000"); //Time passed without heartbeats until closing a connection
+            channelProps.setProperty(TCPChannel.CONNECT_TIMEOUT_KEY, "1000"); //TCP connect timeout
+            channelId = createChannel(TCPChannel.NAME, channelProps); //Create the channel with the given properties
+
         } catch (IOException e) {
             e.printStackTrace();
         }
 
 
-        registerMessageSerializer(Join.MSG_CODE, Join.serializer);
+        registerMessageSerializer(channelId, Join.MSG_CODE, Join.serializer);
         registerMessageHandler(channelId, Join.MSG_CODE, this::uponJoin,
                 this::uponJoinSent, this::uponMessageFailed);
 
-        registerMessageSerializer(Disconnect.MSG_CODE, Disconnect.serializer);
+        registerMessageSerializer(channelId, Disconnect.MSG_CODE, Disconnect.serializer);
         registerMessageHandler(channelId, Disconnect.MSG_CODE, this::uponDisconnect,
                 this::uponDisconnectSent, this::uponMessageFailed);
 
-        registerMessageSerializer(KillPill.MSG_CODE, KillPill.serializer);
+        registerMessageSerializer(channelId, KillPill.MSG_CODE, KillPill.serializer);
         registerMessageHandler(channelId, KillPill.MSG_CODE, this::uponKillPill,
                 this::uponMessageSent, this::uponMessageFailed);
 
-        registerMessageSerializer(ForwardJoin.MSG_CODE, ForwardJoin.serializer);
+        registerMessageSerializer(channelId, ForwardJoin.MSG_CODE, ForwardJoin.serializer);
         registerMessageHandler(channelId, ForwardJoin.MSG_CODE, this::uponForwardJoin,
                 this::uponMessageSent, this::uponMessageFailed);
 
-        registerMessageSerializer(JoinReply.MSG_CODE, JoinReply.serializer);
+        registerMessageSerializer(channelId, JoinReply.MSG_CODE, JoinReply.serializer);
         registerMessageHandler(channelId, JoinReply.MSG_CODE, this::uponJoinReply,
                 this::uponMessageSent, this::uponMessageFailed);
 
-        registerMessageSerializer(NeighbourReq.MSG_CODE, NeighbourReq.serializer);
+        registerMessageSerializer(channelId, NeighbourReq.MSG_CODE, NeighbourReq.serializer);
         registerMessageHandler(channelId, NeighbourReq.MSG_CODE, this::uponNeighbourReq,
                 this::uponMessageSent, this::uponMessageFailed);
 
-        registerMessageSerializer(NeighbourAcc.MSG_CODE, NeighbourAcc.serializer);
+        registerMessageSerializer(channelId, NeighbourAcc.MSG_CODE, NeighbourAcc.serializer);
         registerMessageHandler(channelId, NeighbourAcc.MSG_CODE, this::uponNeighbourAcc,
                 this::uponMessageSent, this::uponMessageFailed);
 
-        registerMessageSerializer(NeighbourRej.MSG_CODE, NeighbourRej.serializer);
+        registerMessageSerializer(channelId, NeighbourRej.MSG_CODE, NeighbourRej.serializer);
         registerMessageHandler(channelId, NeighbourRej.MSG_CODE, this::uponNeighbourRej,
                 this::uponMessageSent, this::uponMessageFailed);
 
-        registerMessageSerializer(FindNeighbour.MSG_CODE, FindNeighbour.serializer);
+        registerMessageSerializer(channelId, FindNeighbour.MSG_CODE, FindNeighbour.serializer);
         registerMessageHandler(channelId, FindNeighbour.MSG_CODE, this::uponFindNeighbour,
                 this::uponMessageSent, this::uponMessageFailed);
 
-        registerMessageSerializer(Shuffle.MSG_CODE, Shuffle.serializer);
+        registerMessageSerializer(channelId, Shuffle.MSG_CODE, Shuffle.serializer);
         registerMessageHandler(channelId, Shuffle.MSG_CODE, this::uponShuffle,
                 this::uponMessageSent, this::uponMessageFailed);
 
-        registerMessageSerializer(ShuffleReply.MSG_CODE, ShuffleReply.serializer);
+        registerMessageSerializer(channelId, ShuffleReply.MSG_CODE, ShuffleReply.serializer);
         registerMessageHandler(channelId, ShuffleReply.MSG_CODE, this::uponShuffleReply,
                 this::uponMessageSent, this::uponMessageFailed);
 
@@ -132,6 +140,7 @@ public class HyParView extends Membership {
                 String[] hostElements = props.getProperty("Contact").split(":");
                 contact = new Host(InetAddress.getByName(hostElements[0]), Short.parseShort(hostElements[1]));
 
+                open(contact);
                 send(new Join(myself, hashStart), contact);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -140,6 +149,7 @@ public class HyParView extends Membership {
         }
 
 
+        open(myself);
         send(new FindNeighbour(), myself);
 
         setupPeriodicTimer( new Views(), 1000, 1000);
@@ -154,6 +164,8 @@ public class HyParView extends Membership {
                 dropRandomFromActive(null);
             }
             Host newNode = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
+
+            open(newNode);
 
             activeView.add(newNode);
 
@@ -193,6 +205,8 @@ public class HyParView extends Membership {
             while (activeView.size() >= ACTIVE) {
                 dropRandomFromActive(null);
             }
+
+            open(newNode);
 
             activeView.add(newNode);
             passiveView.remove(newNode);
@@ -235,6 +249,9 @@ public class HyParView extends Membership {
             passiveView.remove(sender);
             potentialNeighbours.remove(sender);
             activeView.add(sender);
+
+            open(sender);
+
             System.out.println("LOGS-join reply added " + sender);
         }else{
             System.out.println("LOGS-Received joinReply message from someone in active; " + sender);
@@ -260,6 +277,7 @@ public class HyParView extends Membership {
                 NeighbourAcc neighbourAcc = new NeighbourAcc(myself);
 
                 System.out.println("LOGS-neighbourReq added " + newNode);
+                open(contact);
                 send(neighbourAcc, newNode);
 
             } else {
@@ -276,6 +294,7 @@ public class HyParView extends Membership {
             while (activeView.size() >= ACTIVE) {
                 dropRandomFromActive(null);
             }
+            open(newNode);
             activeView.add(newNode);
             passiveView.remove(newNode);
             potentialNeighbours.remove(newNode);
@@ -307,10 +326,12 @@ public class HyParView extends Membership {
             }
 
             k.addAll(kp);
+            open(n);
             send(new Shuffle(myself, myself, ShuffleTTL, k), n);
             uponViews(new Views(), 0);
         }
         if(activeView.size() == 0 && passiveView.size() == 0 && contact != null){
+            open(contact);
             send(new Join(myself, hashStart), contact);
         }
     }
@@ -318,6 +339,8 @@ public class HyParView extends Membership {
     protected void uponShuffle(Shuffle msg, Host from, short sProto, int cId) {
         if(!activeView.contains(msg.getSender())) {
             System.out.println("LOGS-received shuffle from a node not in active " + msg.getSender());
+
+            open(msg.getSender());
             send(new Disconnect(myself), msg.getSender());
             return;
         }
@@ -335,6 +358,7 @@ public class HyParView extends Membership {
                 } else {
                     Random rnd = new Random();
                     Host n = (Host) tmp.toArray()[rnd.nextInt(tmp.size())];
+                    open(n);
                     send(new Shuffle(myself, origin, ttl, k), n);
                 }
             } else {
@@ -349,6 +373,8 @@ public class HyParView extends Membership {
                     }
                 }
 
+
+                open(origin);
                 send(new ShuffleReply(myself, k, kRply), origin);
                 it = k.iterator();
                 Iterator<Host> it2 = kRply.iterator();
@@ -429,6 +455,7 @@ public class HyParView extends Membership {
             int i = rnd.nextInt(potentialNeighbours.size());
             h = (Host) potentialNeighbours.toArray()[i];
             System.out.println("LOGS-sending neighbour request to " + h);
+            open(h);
             send(new NeighbourReq(myself,priority), h);
             potentialNeighbours.remove(h);
             priority--;
@@ -478,6 +505,7 @@ public class HyParView extends Membership {
     protected void uponMessageFailed(ProtoMessage msg, Host to, short destProto, Throwable cause, int channelId) {
         activeView.remove(to);
         Disconnect dc = new Disconnect(myself);
+        open(to);
         send(dc, to);
         System.out.println("LOGS-Message Failed: " + to.toString() + msg.toString());
     }
@@ -508,6 +536,22 @@ public class HyParView extends Membership {
             printViews();
             System.exit(1);
         }
+    }
+
+    private void open(Host host){
+        try {
+            openConnection(host);
+        }catch (java.lang.NullPointerException e){
+            System.out.println("LOGS-nodeDown HOST: " + host);
+            activeView = new HashSet<>();
+            printViews();
+            printViews();
+            printViews();
+            printViews();
+            printViews();
+            System.exit(1);
+        }
+
     }
 
     private void close(Host del){

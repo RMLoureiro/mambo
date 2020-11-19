@@ -1,6 +1,6 @@
 package Memberships;
 
-import babel.generic.GenericProtocol;
+import babel.core.GenericProtocol;
 import network.data.Host;
 
 

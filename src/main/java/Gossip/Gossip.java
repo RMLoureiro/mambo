@@ -2,7 +2,7 @@ package Gossip;
 
 import Memberships.HyParView.HyParView;
 import Memberships.Membership;
-import babel.Babel;
+import babel.core.Babel;
 import babel.exceptions.HandlerRegistrationException;
 import babel.exceptions.InvalidParameterException;
 import babel.exceptions.ProtocolAlreadyExistsException;
@@ -21,7 +21,7 @@ public class Gossip {
     public Gossip(String[] args) throws IOException, InvalidParameterException, ProtocolAlreadyExistsException, HandlerRegistrationException, InterruptedException {
         Babel babel = Babel.getInstance();
         String[] arguments = Arrays.copyOfRange(args, 1, args.length);
-        Properties configProps = babel.loadConfig(args[0], arguments);
+        Properties configProps = babel.loadConfig(arguments, args[0]);
 
         Thread.sleep(1000);
 

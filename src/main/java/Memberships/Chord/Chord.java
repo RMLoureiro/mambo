@@ -1,7 +1,7 @@
 package Memberships.Chord;
 
+import babel.core.GenericProtocol;
 import babel.exceptions.HandlerRegistrationException;
-import babel.generic.GenericProtocol;
 
 import java.io.IOException;
 import java.util.Properties;

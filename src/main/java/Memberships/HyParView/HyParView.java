@@ -140,7 +140,8 @@ public class HyParView extends Membership {
                 String[] hostElements = props.getProperty("Contact").split(":");
                 contact = new Host(InetAddress.getByName(hostElements[0]), Short.parseShort(hostElements[1]));
 
-                open(contact);
+                System.out.println("LOGS-Open connection contact: " + contact);
+                openConnection(contact);
                 send(new Join(myself, hashStart), contact);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -149,7 +150,8 @@ public class HyParView extends Membership {
         }
 
 
-        open(myself);
+        System.out.println("LOGS-Open connection myself: " + myself);
+        openConnection(myself);
         send(new FindNeighbour(), myself);
 
         setupPeriodicTimer( new Views(), 1000, 1000);
@@ -165,7 +167,8 @@ public class HyParView extends Membership {
             }
             Host newNode = new Host(msg.getSender().getAddress(), msg.getSender().getPort());
 
-            open(newNode);
+            System.out.println("LOGS-Open connection upon join: " + newNode);
+            openConnection(newNode);
 
             activeView.add(newNode);
 
@@ -206,7 +209,8 @@ public class HyParView extends Membership {
                 dropRandomFromActive(null);
             }
 
-            open(newNode);
+            System.out.println("LOGS-Open connection upon forward join: " + newNode);
+            openConnection(newNode);
 
             activeView.add(newNode);
             passiveView.remove(newNode);
@@ -250,7 +254,8 @@ public class HyParView extends Membership {
             potentialNeighbours.remove(sender);
             activeView.add(sender);
 
-            open(sender);
+            System.out.println("LOGS-Open connection uponJoinReply: " + sender);
+            openConnection(sender);
 
             System.out.println("LOGS-join reply added " + sender);
         }else{
@@ -277,7 +282,8 @@ public class HyParView extends Membership {
                 NeighbourAcc neighbourAcc = new NeighbourAcc(myself);
 
                 System.out.println("LOGS-neighbourReq added " + newNode);
-                open(contact);
+                System.out.println("LOGS-Open connection upon neighbour Req: " + newNode);
+                openConnection(newNode);
                 send(neighbourAcc, newNode);
 
             } else {
@@ -294,7 +300,8 @@ public class HyParView extends Membership {
             while (activeView.size() >= ACTIVE) {
                 dropRandomFromActive(null);
             }
-            open(newNode);
+            System.out.println("LOGS-Open connection uponNeighbour accept: " + newNode);
+            openConnection(newNode);
             activeView.add(newNode);
             passiveView.remove(newNode);
             potentialNeighbours.remove(newNode);
@@ -326,12 +333,14 @@ public class HyParView extends Membership {
             }
 
             k.addAll(kp);
-            open(n);
+            System.out.println("LOGS-Open connection Shuffle n: " + n);
+            openConnection(n);
             send(new Shuffle(myself, myself, ShuffleTTL, k), n);
             uponViews(new Views(), 0);
         }
         if(activeView.size() == 0 && passiveView.size() == 0 && contact != null){
-            open(contact);
+            System.out.println("LOGS-Open connection Shuffle contact: " + contact);
+            openConnection(contact);
             send(new Join(myself, hashStart), contact);
         }
     }
@@ -340,7 +349,8 @@ public class HyParView extends Membership {
         if(!activeView.contains(msg.getSender())) {
             System.out.println("LOGS-received shuffle from a node not in active " + msg.getSender());
 
-            open(msg.getSender());
+            System.out.println("LOGS-Open connection upponShuffle sender: " + msg.getSender());
+            openConnection(msg.getSender());
             send(new Disconnect(myself), msg.getSender());
             return;
         }
@@ -358,7 +368,8 @@ public class HyParView extends Membership {
                 } else {
                     Random rnd = new Random();
                     Host n = (Host) tmp.toArray()[rnd.nextInt(tmp.size())];
-                    open(n);
+                    System.out.println("LOGS-Open connection upponShuffle n: " + n);
+                    openConnection(n);
                     send(new Shuffle(myself, origin, ttl, k), n);
                 }
             } else {
@@ -373,8 +384,8 @@ public class HyParView extends Membership {
                     }
                 }
 
-
-                open(origin);
+                System.out.println("LOGS-Open connection upponShiffle origin: " + sender);
+                openConnection(origin);
                 send(new ShuffleReply(myself, k, kRply), origin);
                 it = k.iterator();
                 Iterator<Host> it2 = kRply.iterator();
@@ -455,7 +466,8 @@ public class HyParView extends Membership {
             int i = rnd.nextInt(potentialNeighbours.size());
             h = (Host) potentialNeighbours.toArray()[i];
             System.out.println("LOGS-sending neighbour request to " + h);
-            open(h);
+            System.out.println("LOGS-Open connection upon find neighbour: " + h);
+            openConnection(h);
             send(new NeighbourReq(myself,priority), h);
             potentialNeighbours.remove(h);
             priority--;
@@ -505,7 +517,8 @@ public class HyParView extends Membership {
     protected void uponMessageFailed(ProtoMessage msg, Host to, short destProto, Throwable cause, int channelId) {
         activeView.remove(to);
         Disconnect dc = new Disconnect(myself);
-        open(to);
+        System.out.println("LOGS-Open connection uppon message failed: " + to);
+        openConnection(to);
         send(dc, to);
         System.out.println("LOGS-Message Failed: " + to.toString() + msg.toString());
     }
@@ -536,22 +549,6 @@ public class HyParView extends Membership {
             printViews();
             System.exit(1);
         }
-    }
-
-    private void open(Host host){
-        try {
-            openConnection(host);
-        }catch (java.lang.NullPointerException e){
-            System.out.println("LOGS-nodeDown HOST: " + host);
-            activeView = new HashSet<>();
-            printViews();
-            printViews();
-            printViews();
-            printViews();
-            printViews();
-            System.exit(1);
-        }
-
     }
 
     private void close(Host del){

@@ -9,6 +9,7 @@ import babel.exceptions.ProtocolAlreadyExistsException;
 import network.data.Host;
 
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.Set;
@@ -56,4 +57,32 @@ public class Gossip {
     public void newNode(Host node){ neighbourhood.add(node); }
 
     public void nodeDown(Host node){ neighbourhood.remove(node); }
+
+    public void join(String ip, int port) throws UnknownHostException {
+        membership.join(ip,port);
+    }
+
+    public void leave(String ip, int port){
+
+    }
+
+    public void leave(String id){
+
+    }
+
+    public void leave(){
+
+    }
+
+    public String[] members(){
+        return new String[0];
+    }
+
+    public void send(String message){
+
+    }
+
+    public void send(String message, String ip, String port){
+
+    }
 }

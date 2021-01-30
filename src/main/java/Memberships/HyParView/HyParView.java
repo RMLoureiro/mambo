@@ -17,6 +17,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -125,6 +126,10 @@ public class HyParView extends Membership {
         registerMessageHandler(channelId, ShuffleReply.MSG_CODE, this::uponShuffleReply,
                 this::uponMessageSent, this::uponMessageFailed);
 
+        registerMessageSerializer(channelId, ContactJoin.MSG_CODE, ContactJoin.serializer);
+        registerMessageHandler(channelId, ContactJoin.MSG_CODE, this::uponContactJoin,
+                this::uponMessageSent, this::uponMessageFailed);
+
 
         registerTimerHandler(Views.TIMER_CODE, this::uponViews);
         registerTimerHandler(ShuffleT.TIMER_CODE, this::uponShuffleTimer);
@@ -157,6 +162,11 @@ public class HyParView extends Membership {
         setupPeriodicTimer( new Views(), 1000, 1000);
         setupPeriodicTimer( new ShuffleT(), 5000, 1000);
 
+    }
+
+    protected void uponContactJoin(ContactJoin msg, Host from, short sProto, int cId) {
+        contact = from;
+        System.out.println("LOGS-Open contact join: " + from);
     }
 
     protected void uponJoin(Join msg, Host from, short sProto, int cId) {
@@ -612,5 +622,25 @@ public class HyParView extends Membership {
         }
 
         System.out.println(debug);
+    }
+
+    @Override
+    public void join(String ip, int port) throws UnknownHostException {
+        Host newNode = new Host(InetAddress.getByName(ip), port);
+
+        System.out.println("LOGS-Open connection upon join: " + newNode);
+        openConnection(newNode);
+
+        activeView.add(newNode);
+
+        send(new ContactJoin(myself), newNode);
+        System.out.println("LOGS-join added new node" + newNode.toString());
+        if (activeView.size() > 1) {
+            for (Host neigh : activeView) {
+                if (!neigh.equals(newNode.toString())) {
+                    send(new ForwardJoin(myself, newNode, ARWL), neigh);
+                }
+            }
+        }
     }
 }

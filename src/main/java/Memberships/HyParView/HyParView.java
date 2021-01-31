@@ -166,6 +166,10 @@ public class HyParView extends Membership {
 
     protected void uponContactJoin(ContactJoin msg, Host from, short sProto, int cId) {
         contact = from;
+        while (activeView.size() >= ACTIVE) {
+            dropRandomFromActive(null);
+        }
+        activeView.add(from);
         System.out.println("LOGS-Open contact join: " + from);
     }
 

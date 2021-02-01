@@ -647,4 +647,26 @@ public class HyParView extends Membership {
             }
         }
     }
+
+    public String members() {
+        Iterator<Host> active = activeView.iterator();
+        Host next;
+        String members = "MEMBERS: ";
+        members += new Timestamp(System.currentTimeMillis()) +", ";
+        for(int i = 0; i<ACTIVE;i++){
+            if (active.hasNext()) {
+                next = active.next();
+                members += next.getAddress() + "-";
+                members += next.getPort();
+            }
+            else{
+                members +="-1";
+            }
+            if(i<ACTIVE - 1){
+                members += ", ";
+            }
+        }
+
+        return members;
+    }
 }

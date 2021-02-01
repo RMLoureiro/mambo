@@ -13,25 +13,29 @@ public class Main {
 
 
     public static void main(String[] args) throws Exception {
-        Gossip gossip = new Gossip(args);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        
-        String line[] = reader.readLine().split(" ");
-        String option = line[0];
+        Mambo mambo = new Mambo(args);
 
-        switch(option){
-            case "JOIN":
-                line = reader.readLine().split(":");
-                gossip.join(line[0], Integer.parseInt(line[1]));
-                break;
-            case "LEAVE":
-                break;
-            case "MEMBERS":
-                break;
-            case "SEND":
-                break;
-            default:
-                break;
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+        while(true){
+            String line[] = reader.readLine().split(" ");
+            String option = line[0];
+            switch(option){
+                case "JOIN":
+                    line = reader.readLine().split(":");
+                    mambo.join(line[0], Integer.parseInt(line[1]));
+                    break;
+                case "LEAVE":
+                    break;
+                case "MEMBERS":
+                    String members = mambo.members();
+                    System.out.println(members);
+                    break;
+                case "SEND":
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

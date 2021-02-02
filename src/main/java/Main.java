@@ -26,6 +26,16 @@ public class Main {
                     mambo.join(line[0], Integer.parseInt(line[1]));
                     break;
                 case "LEAVE":
+                    if(line.length == 1){
+                        mambo.leave();
+                    }else{
+                        line = reader.readLine().split(":");
+                        if(line.length == 2){
+                            mambo.leave(line[0], Integer.parseInt(line[1]));
+                        }else if(line.length == 1){
+                            mambo.leave(line[0]);
+                        }
+                    }
                     break;
                 case "MEMBERS":
                     String members = mambo.members();

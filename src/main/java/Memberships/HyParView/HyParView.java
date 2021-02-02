@@ -195,17 +195,22 @@ public class HyParView extends Membership {
                 }
             }
         }else{
-            send(new KillPill(myself), msg.getSender());
+            send(new KillPill(myself, 0), msg.getSender());
         }
 
     }
 
     protected void uponKillPill(KillPill msg, Host from, short sProto, int cId) {
-        if(contact != null){
-            if(msg.getSender().toString().equals(contact.toString())) {
-                System.out.println("Kill pill, wrong arguments");
-                System.exit(0);
+        if(msg.getCode() == 0) {
+            if (contact != null) {
+                if (msg.getSender().toString().equals(contact.toString())) {
+                    System.out.println("LOGS-Kill pill, wrong arguments");
+                    System.exit(0);
+                }
             }
+        }else if(msg.getCode() == 1){
+            System.out.println("LOGS-Kill pill, leave from: " + from.toString());
+            System.exit(0);
         }
     }
 
@@ -668,5 +673,21 @@ public class HyParView extends Membership {
         }
 
         return members;
+    }
+
+    @Override
+    public void leave() {
+        System.out.println("LOGS-Self leave");
+        System.exit(0);
+    }
+
+    @Override
+    public void leave(String ip, int port) throws UnknownHostException {
+        Host del = new Host(InetAddress.getByName(ip), port);
+
+        System.out.println("LOGS-Open connection upon join: " + del);
+        openConnection(del);
+
+        send(new KillPill(myself, 1), del);
     }
 }

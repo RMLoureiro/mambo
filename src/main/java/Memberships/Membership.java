@@ -15,4 +15,8 @@ public abstract class Membership extends GenericProtocol {
     public abstract void join(String ip, int port) throws UnknownHostException;
 
     public abstract String members();
+
+    public abstract void leave();
+
+    public abstract void leave(String ip, int port) throws UnknownHostException;
 }

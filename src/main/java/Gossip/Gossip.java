@@ -50,27 +50,19 @@ public class Gossip {
 
     }
 
-    public void startMembership(Membership membership){
-        this.membership = membership;
-    }
-
     public void newNode(Host node){ neighbourhood.add(node); }
 
     public void nodeDown(Host node){ neighbourhood.remove(node); }
 
     public void join(String ip, int port) throws UnknownHostException { membership.join(ip,port); }
 
-    public void leave(String ip, int port){
-
-    }
+    public void leave(String ip, int port) throws UnknownHostException { membership.leave(ip, port); }
 
     public void leave(String id){
 
     }
 
-    public void leave(){
-
-    }
+    public void leave(){ membership.leave(); }
 
     public String members(){
         return membership.members();

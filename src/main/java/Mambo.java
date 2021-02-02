@@ -41,17 +41,13 @@ public class Mambo {
 
     public void join(String ip, int port) throws UnknownHostException { gossip.join(ip,port); }
 
-    public void leave(String ip, int port){
-
-    }
+    public void leave(String ip, int port) throws UnknownHostException { gossip.leave(ip, port); }
 
     public void leave(String id){
 
     }
 
-    public void leave(){
-
-    }
+    public void leave(){ gossip.leave(); }
 
     public String members(){
         return gossip.members();

@@ -84,7 +84,7 @@ public class Gossip {
         System.out.println("LOGS-MSG: " + message);
     }
 
-    public void receive(BigInteger id, String message){
+    public void receive(int id, String message){
 
     }
 }

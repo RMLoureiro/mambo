@@ -12,7 +12,7 @@ import java.util.Random;
 import java.util.Set;
 
 public class EagerPush extends Gossip {
-    Set<BigInteger> msgs;
+    Set<Integer> msgs;
     public EagerPush(String[] args) throws IOException, InvalidParameterException, ProtocolAlreadyExistsException, HandlerRegistrationException, InterruptedException {
         super(args);
         msgs = new HashSet<>();
@@ -28,7 +28,7 @@ public class EagerPush extends Gossip {
         }
     }
 
-    public void receive(BigInteger id, String message){
+    public void receive(int id, String message){
         if(!msgs.contains(id)){
             msgs.add(id);
             System.out.println("LOGS-MSG: " + message);

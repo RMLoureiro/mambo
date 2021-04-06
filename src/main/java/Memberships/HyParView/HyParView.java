@@ -5,10 +5,8 @@ import Memberships.HyParView.Messages.*;
 import Memberships.HyParView.Timers.ShuffleT;
 import Memberships.HyParView.Timers.Views;
 import Memberships.Membership;
-import babel.core.GenericProtocol;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.ProtoMessage;
-import babel.handlers.ChannelEventHandler;
 import channel.tcp.TCPChannel;
 import channel.tcp.events.*;
 import network.data.Host;
@@ -689,5 +687,10 @@ public class HyParView extends Membership {
         openConnection(del);
 
         send(new KillPill(myself, 1), del);
+    }
+
+    @Override
+    public Set<Host> neighbourhood() {
+        return activeView;
     }
 }

@@ -9,6 +9,7 @@ import babel.exceptions.ProtocolAlreadyExistsException;
 import network.data.Host;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Properties;
@@ -17,6 +18,7 @@ import java.util.Set;
 public class Gossip {
 
     Set<Host> neighbourhood;
+    int fanout;
 
     public Membership membership;
     public Gossip(String[] args) throws IOException, InvalidParameterException, ProtocolAlreadyExistsException, HandlerRegistrationException, InterruptedException {
@@ -27,6 +29,8 @@ public class Gossip {
         Thread.sleep(1000);
 
         int type = Integer.parseInt(configProps.getProperty("membership"));
+        fanout = Integer.parseInt(configProps.getProperty("active"));
+
         Membership membership = null;
 
         switch (type) {
@@ -73,6 +77,14 @@ public class Gossip {
     }
 
     public void send(String message, String ip, String port){
+
+    }
+
+    public void receive(String message){
+        System.out.println("LOGS-MSG: " + message);
+    }
+
+    public void receive(BigInteger id, String message){
 
     }
 }

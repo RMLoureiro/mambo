@@ -42,6 +42,10 @@ public class Main {
                     System.out.println(members);
                     break;
                 case "SEND":
+                    line = reader.readLine().split(":");
+                    if(line.length == 2){
+                        mambo.send(reader.readLine(), line[0], Integer.parseInt(line[1]));
+                    }
                     break;
                 default:
                     break;

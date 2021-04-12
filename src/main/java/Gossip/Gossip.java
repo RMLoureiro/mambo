@@ -10,6 +10,7 @@ import network.data.Host;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Properties;
@@ -72,19 +73,15 @@ public class Gossip {
         return membership.members();
     }
 
-    public void send(String message){
+    public void send(int id, String message){ }
 
+    public void send(String message, String ip, int port) throws UnknownHostException {
+        membership.sendDirectMessage(message, new Host(InetAddress.getByName(ip), port));
     }
 
-    public void send(String message, String ip, String port){
-
-    }
+    public void receive(int id, String message){}
 
     public void receive(String message){
         System.out.println("LOGS-MSG: " + message);
-    }
-
-    public void receive(int id, String message){
-
     }
 }

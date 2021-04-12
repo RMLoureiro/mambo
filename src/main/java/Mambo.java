@@ -54,10 +54,10 @@ public class Mambo {
     }
 
     public void send(String message){
-
+        gossip.send(message.hashCode(), message);
     }
 
-    public void send(String message, String ip, String port){
-
+    public void send(String message, String ip, int port) throws UnknownHostException {
+        gossip.send(message, ip, port);
     }
 }

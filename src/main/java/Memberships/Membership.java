@@ -30,4 +30,6 @@ public abstract class Membership extends GenericProtocol {
     public abstract void sendDirectMessage(String message, Host receiver);
 
     public abstract void sendGossip(int id, String message, Host receiver);
+
+    public abstract void sendLeave(int id, Host receiver);
 }

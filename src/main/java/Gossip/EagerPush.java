@@ -12,8 +12,8 @@ import java.util.Set;
 
 public class EagerPush extends Gossip {
     Set<Integer> msgs;
-    public EagerPush(String[] args) throws IOException, InvalidParameterException, ProtocolAlreadyExistsException, HandlerRegistrationException, InterruptedException {
-        super(args);
+    public EagerPush(int id, String[] args) throws IOException, InvalidParameterException, ProtocolAlreadyExistsException, HandlerRegistrationException, InterruptedException {
+        super(id, args);
         msgs = new HashSet<>();
     }
 
@@ -32,6 +32,20 @@ public class EagerPush extends Gossip {
             msgs.add(id);
             System.out.println("LOGS-MSG: " + message);
             send(id, message);
+        }
+    }
+
+    public void leave(int id){
+        if (this.id == id){
+            leave();
+        }else{
+            Set<Host> neighbours = membership.neighbourhood();
+            Random rnd = new Random();
+            for(int i = 0; i < fanout; i++){
+                Host neigh = (Host) neighbours.toArray()[rnd.nextInt(neighbours.size())];
+                neighbours.remove(neigh);
+                membership.sendLeave(id, neigh);
+            }
         }
     }
 }

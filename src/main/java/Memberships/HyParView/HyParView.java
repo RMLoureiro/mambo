@@ -3,6 +3,7 @@ package Memberships.HyParView;
 import Gossip.Gossip;
 import Gossip.Messages.DirectMessage;
 import Gossip.Messages.GossipMessage;
+import Gossip.Messages.Leave;
 import Memberships.HyParView.Messages.*;
 import Memberships.HyParView.Timers.ShuffleT;
 import Memberships.HyParView.Timers.Views;
@@ -136,6 +137,10 @@ public class HyParView extends Membership {
 
         registerMessageSerializer(channelId, GossipMessage.MSG_CODE, GossipMessage.serializer);
         registerMessageHandler(channelId, GossipMessage.MSG_CODE, this::uponGossipMessage,
+                this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(channelId, Leave.MSG_CODE, Leave.serializer);
+        registerMessageHandler(channelId, Leave.MSG_CODE, this::uponLeaveMessage,
                 this::uponMessageSent, this::uponMessageFailed);
 
 
@@ -716,11 +721,21 @@ public class HyParView extends Membership {
         send(new GossipMessage(id, message), receiver);
     }
 
+    @Override
+    public void sendLeave(int id, Host receiver) {
+        openConnection(receiver);
+        send(new Leave(id), receiver);
+    }
+
     protected void uponDirectMessage(DirectMessage directMessage, Host from, short sProto, int cId) {
         gossip.receive(directMessage.getMessage());
     }
 
     protected void uponGossipMessage(GossipMessage gossipMessage, Host from, short sProto, int cId) {
         gossip.receive(gossipMessage.getMessageId(), gossipMessage.getMessage());
+    }
+
+    protected void uponLeaveMessage(Leave leave, Host from, short sProto, int cId) {
+        gossip.leave(leave.getHostId());
     }
 }

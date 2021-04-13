@@ -19,13 +19,14 @@ import java.util.Set;
 public class Gossip {
 
     Set<Host> neighbourhood;
-    int fanout;
+    int fanout, id;
 
     public Membership membership;
-    public Gossip(String[] args) throws IOException, InvalidParameterException, ProtocolAlreadyExistsException, HandlerRegistrationException, InterruptedException {
+    public Gossip(int id, String[] args) throws IOException, InvalidParameterException, ProtocolAlreadyExistsException, HandlerRegistrationException, InterruptedException {
         Babel babel = Babel.getInstance();
         String[] arguments = Arrays.copyOfRange(args, 1, args.length);
         Properties configProps = babel.loadConfig(arguments, args[0]);
+        this.id = id;
 
         Thread.sleep(1000);
 
@@ -63,9 +64,7 @@ public class Gossip {
 
     public void leave(String ip, int port) throws UnknownHostException { membership.leave(ip, port); }
 
-    public void leave(String id){
-
-    }
+    public void leave(int id){ }
 
     public void leave(){ membership.leave(); }
 

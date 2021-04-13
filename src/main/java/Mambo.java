@@ -17,16 +17,20 @@ import java.util.Properties;
 
 public class Mambo {
 
+    int id;
     Gossip gossip;
+
     public Mambo(String[] args) throws InterruptedException, ProtocolAlreadyExistsException, InvalidParameterException, HandlerRegistrationException, IOException {
         Babel babel = Babel.getInstance();
         String[] arguments = Arrays.copyOfRange(args, 1, args.length);
         Properties configProps = babel.loadConfig(arguments, args[0]);
+        String addr = configProps.getProperty("address") + configProps.getProperty("port");
+        id = addr.hashCode();
 
         int type = Integer.parseInt(configProps.getProperty("gossip"));
         switch (type) {
             case 1:
-                gossip = new EagerPush(args);
+                gossip = new EagerPush(id, args);
                 break;
 
             case 2:
@@ -44,7 +48,7 @@ public class Mambo {
     public void leave(String ip, int port) throws UnknownHostException { gossip.leave(ip, port); }
 
     public void leave(String id){
-
+        gossip.leave(Integer.parseInt(id));
     }
 
     public void leave(){ gossip.leave(); }

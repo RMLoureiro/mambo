@@ -1,14 +1,15 @@
 package Memberships.HyParView;
 
 import Gossip.Gossip;
+import Gossip.Messages.DirectMessage;
+import Gossip.Messages.GossipMessage;
+import Gossip.Messages.Leave;
 import Memberships.HyParView.Messages.*;
 import Memberships.HyParView.Timers.ShuffleT;
 import Memberships.HyParView.Timers.Views;
 import Memberships.Membership;
-import babel.core.GenericProtocol;
 import babel.exceptions.HandlerRegistrationException;
 import babel.generic.ProtoMessage;
-import babel.handlers.ChannelEventHandler;
 import channel.tcp.TCPChannel;
 import channel.tcp.events.*;
 import network.data.Host;
@@ -17,6 +18,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -125,6 +127,22 @@ public class HyParView extends Membership {
         registerMessageHandler(channelId, ShuffleReply.MSG_CODE, this::uponShuffleReply,
                 this::uponMessageSent, this::uponMessageFailed);
 
+        registerMessageSerializer(channelId, ContactJoin.MSG_CODE, ContactJoin.serializer);
+        registerMessageHandler(channelId, ContactJoin.MSG_CODE, this::uponContactJoin,
+                this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(channelId, DirectMessage.MSG_CODE, DirectMessage.serializer);
+        registerMessageHandler(channelId, DirectMessage.MSG_CODE, this::uponDirectMessage,
+                this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(channelId, GossipMessage.MSG_CODE, GossipMessage.serializer);
+        registerMessageHandler(channelId, GossipMessage.MSG_CODE, this::uponGossipMessage,
+                this::uponMessageSent, this::uponMessageFailed);
+
+        registerMessageSerializer(channelId, Leave.MSG_CODE, Leave.serializer);
+        registerMessageHandler(channelId, Leave.MSG_CODE, this::uponLeaveMessage,
+                this::uponMessageSent, this::uponMessageFailed);
+
 
         registerTimerHandler(Views.TIMER_CODE, this::uponViews);
         registerTimerHandler(ShuffleT.TIMER_CODE, this::uponShuffleTimer);
@@ -159,6 +177,15 @@ public class HyParView extends Membership {
 
     }
 
+    protected void uponContactJoin(ContactJoin msg, Host from, short sProto, int cId) {
+        contact = from;
+        while (activeView.size() >= ACTIVE) {
+            dropRandomFromActive(null);
+        }
+        activeView.add(from);
+        System.out.println("LOGS-Open contact join: " + from);
+    }
+
     protected void uponJoin(Join msg, Host from, short sProto, int cId) {
         int hash = msg.getHash();
         if(hash == hashStart) {
@@ -181,17 +208,22 @@ public class HyParView extends Membership {
                 }
             }
         }else{
-            send(new KillPill(myself), msg.getSender());
+            send(new KillPill(myself, 0), msg.getSender());
         }
 
     }
 
     protected void uponKillPill(KillPill msg, Host from, short sProto, int cId) {
-        if(contact != null){
-            if(msg.getSender().toString().equals(contact.toString())) {
-                System.out.println("Kill pill, wrong arguments");
-                System.exit(0);
+        if(msg.getCode() == 0) {
+            if (contact != null) {
+                if (msg.getSender().toString().equals(contact.toString())) {
+                    System.out.println("LOGS-Kill pill, wrong arguments");
+                    System.exit(0);
+                }
             }
+        }else if(msg.getCode() == 1){
+            System.out.println("LOGS-Kill pill, leave from: " + from.toString());
+            System.exit(0);
         }
     }
 
@@ -612,5 +644,98 @@ public class HyParView extends Membership {
         }
 
         System.out.println(debug);
+    }
+
+    @Override
+    public void join(String ip, int port) throws UnknownHostException {
+        Host newNode = new Host(InetAddress.getByName(ip), port);
+
+        System.out.println("LOGS-Open connection upon join: " + newNode);
+        openConnection(newNode);
+
+        activeView.add(newNode);
+
+        send(new ContactJoin(myself), newNode);
+        System.out.println("LOGS-join added new node" + newNode.toString());
+        if (activeView.size() > 1) {
+            for (Host neigh : activeView) {
+                if (!neigh.equals(newNode.toString())) {
+                    send(new ForwardJoin(myself, newNode, ARWL), neigh);
+                }
+            }
+        }
+    }
+
+    public String members() {
+        Iterator<Host> active = activeView.iterator();
+        Host next;
+        String members = "MEMBERS: ";
+        members += new Timestamp(System.currentTimeMillis()) +", ";
+        for(int i = 0; i<ACTIVE;i++){
+            if (active.hasNext()) {
+                next = active.next();
+                members += next.getAddress() + "-";
+                members += next.getPort();
+            }
+            else{
+                members +="-1";
+            }
+            if(i<ACTIVE - 1){
+                members += ", ";
+            }
+        }
+
+        return members;
+    }
+
+    @Override
+    public void leave() {
+        System.out.println("LOGS-Self leave");
+        System.exit(0);
+    }
+
+    @Override
+    public void leave(String ip, int port) throws UnknownHostException {
+        Host del = new Host(InetAddress.getByName(ip), port);
+
+        System.out.println("LOGS-Open connection upon join: " + del);
+        openConnection(del);
+
+        send(new KillPill(myself, 1), del);
+    }
+
+    @Override
+    public Set<Host> neighbourhood() {
+        return activeView;
+    }
+
+    @Override
+    public void sendDirectMessage(String message, Host receiver) {
+        openConnection(receiver);
+        send(new DirectMessage(message), receiver);
+    }
+
+    @Override
+    public void sendGossip(int id, String message, Host receiver) {
+        openConnection(receiver);
+        send(new GossipMessage(id, message), receiver);
+    }
+
+    @Override
+    public void sendLeave(int id, Host receiver) {
+        openConnection(receiver);
+        send(new Leave(id), receiver);
+    }
+
+    protected void uponDirectMessage(DirectMessage directMessage, Host from, short sProto, int cId) {
+        gossip.receive(directMessage.getMessage());
+    }
+
+    protected void uponGossipMessage(GossipMessage gossipMessage, Host from, short sProto, int cId) {
+        gossip.receive(gossipMessage.getMessageId(), gossipMessage.getMessage());
+    }
+
+    protected void uponLeaveMessage(Leave leave, Host from, short sProto, int cId) {
+        gossip.leave(leave.getHostId());
     }
 }

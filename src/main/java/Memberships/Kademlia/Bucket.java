@@ -11,9 +11,14 @@ import java.util.List;
 public class Bucket {
 
     List<Pair<String, Host>> list;
+    public Bucket left, right;
+    public String prefix;
 
-    public Bucket(){
+    public Bucket(String prefix){
         list = new ArrayList<>();
+        left = null;
+        right = null;
+        this.prefix = prefix;
     }
 
     public Iterator<Pair<String, Host>> filter(String prefix){
@@ -35,4 +40,30 @@ public class Bucket {
     public int size(){
         return list.size();
     }
+
+    public void setPrefix(String prefix){
+        this.prefix = prefix;
+    }
+
+    public String getPrefix(){
+        return prefix;
+    }
+
+    public void setRight(Bucket right){
+        this.right = right;
+    }
+
+    public Bucket getRight(){
+        return right;
+    }
+
+    public void setLeft(Bucket left){
+        this.left = left;
+    }
+
+    public Bucket getLeft(){
+        return left;
+    }
+
+    public List<Pair<String, Host>> getList() { return list;}
 }

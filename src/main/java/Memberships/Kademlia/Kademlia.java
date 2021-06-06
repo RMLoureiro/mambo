@@ -8,6 +8,7 @@ import network.data.Host;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Properties;
@@ -34,7 +35,7 @@ public class Kademlia extends Membership {
         myself = new Host(InetAddress.getByName(props.getProperty("address")),
                 Integer.parseInt(props.getProperty("port")));
 
-        id = DigestUtils.sha1Hex(myself.getAddress() + ":" + myself.getPort());
+        id = new BigInteger( DigestUtils.sha1Hex(myself.getAddress() + ":" + myself.getPort()), 16).toString(2);
 
         Properties channelProps = new Properties();
         channelProps.setProperty(TCPChannel.ADDRESS_KEY, props.getProperty("address")); //The address to bind to
